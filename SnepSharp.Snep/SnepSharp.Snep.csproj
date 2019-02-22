@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SnepSharp.Llcp\SnepSharp.Llcp.csproj" />
+    <ProjectReference Include="..\SnepSharp.Ndef\SnepSharp.Ndef.csproj" />
+    <ProjectReference Include="..\SnepSharp.Common\SnepSharp.Common.csproj" />
+  </ItemGroup>
+</Project>
