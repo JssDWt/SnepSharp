@@ -13,11 +13,6 @@ namespace SnepSharp.Llcp
         public const int MaximumInformationUnit = 128;
 
         /// <summary>
-        /// The default llcp version.
-        /// </summary>
-        public const LlcpVersion DefaultLlcpVersion = LlcpVersion.V10;
-
-        /// <summary>
         /// The default timeout in milliseconds.
         /// </summary>
         public const int DefaultTimeout = 100;

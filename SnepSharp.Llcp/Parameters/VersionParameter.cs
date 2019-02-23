@@ -19,7 +19,7 @@
         /// </summary>
         /// <param name="version">The LLCP version.</param>
         public VersionParameter(LlcpVersion version)
-            : base(ParameterType.Version, new byte[] { (byte)version })
+            : base(ParameterType.Version, new byte[] { version.Version })
         {
             this.Version = version;
         }

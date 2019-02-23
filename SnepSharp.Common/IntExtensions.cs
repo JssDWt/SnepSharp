@@ -20,5 +20,27 @@
                 Array.Reverse(intBytes);
             return intBytes;
         }
+
+        public static int FromByteArray(byte[] bytes, int startIndex = 0)
+        {
+            if (bytes == null)
+            {
+                throw new ArgumentNullException(nameof(bytes));
+            }
+
+            if (BitConverter.IsLittleEndian)
+            {
+                // Reverse the bytes in a copy
+                var copy = new byte[]
+                {
+                    bytes[startIndex + 1],
+                    bytes[startIndex]
+                };
+
+                return BitConverter.ToInt16(copy, 0);
+            }
+
+            return BitConverter.ToInt16(bytes, startIndex);
+        }
     }
 }

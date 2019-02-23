@@ -1,6 +1,7 @@
 ﻿namespace SnepSharp.Snep
 {
     using System;
+    using System.Collections.Generic;
     using System.IO;
 
     /// <summary>
@@ -14,10 +15,19 @@
         /// <value>The length.</value>
         public int Length { get; }
 
+        public IEnumerable<NdefRecord> Records { get; }
+
         /// <summary>
         /// Initializes a new instance of the <see cref="T:Snep.NdefMessage"/> class.
         /// </summary>
-        public NdefMessage()
+        public NdefMessage(params NdefRecord[] records)
+        {
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="T:Snep.NdefMessage"/> class.
+        /// </summary>
+        public NdefMessage(IEnumerable<NdefRecord> records)
         {
         }
 
@@ -28,6 +38,11 @@
         public Stream AsStream()
         {
             throw new NotImplementedException();
+        }
+
+        public static NdefMessage FromStream(Stream message)
+        {
+
         }
     }
 }

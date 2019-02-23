@@ -10,9 +10,9 @@
     internal class SnepRequest : SnepMessage
     {
         /// <summary>
-        /// Full snep header.
+        /// Prefix for the information field.
         /// </summary>
-        private readonly byte[] fullHeader;
+        private readonly byte[] informationPrefix;
 
         /// <summary>
         /// Gets the request operation/command.
@@ -43,34 +43,23 @@
             :base(version, (byte)request, content)
         {
             this.Request = request;
-
-            if (informationPrefix == null)
-            {
-                this.fullHeader = this.snepHeader;
-            }
-            else
-            {
-                this.fullHeader = this.snepHeader.Concat(informationPrefix).ToArray();
-            }
+            this.informationPrefix = informationPrefix;
         }
 
         /// <summary>
-        /// Creates a <see cref="Stream"/> representation of the message.
+        /// Appends the information prefix to the base information stream.
         /// </summary>
         /// <returns>The stream.</returns>
-        public virtual Stream AsStream()
+        protected override Stream InformationAsStream()
         {
-            Stream result;
-            if (this.Information == null)
+            Stream baseStream = base.InformationAsStream();
+
+            if (this.informationPrefix == null || baseStream == null)
             {
-                result = new MemoryStream(this.snepHeader);
-            }
-            else
-            {
-                result = new ByteHeaderStream(this.Information.AsStream(), this.fullHeader);
+                return baseStream;
             }
 
-            return result;
+            return new ByteHeaderStream(baseStream, this.informationPrefix, disposeInner: true);
         }
     }
 }

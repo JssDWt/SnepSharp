@@ -3,7 +3,7 @@
     /// <summary>
     /// Enumaration containing snep response status codes.
     /// </summary>
-    public enum SnepResponseCode
+    internal enum SnepResponseCode
     {
         Continue = 0x80,
         Success = 0x81,

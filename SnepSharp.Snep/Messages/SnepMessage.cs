@@ -1,39 +1,25 @@
 ﻿namespace SnepSharp.Snep.Messages
 {
+    using System;
+    using System.IO;
     using SnepSharp.Common;
 
     /// <summary>
     /// Snep message base class.
     /// </summary>
-    internal abstract class SnepMessage
+    internal class SnepMessage
     {
         /// <summary>
-        /// The length of the snep header.
+        /// Gets the snep header of the message.
         /// </summary>
-        private const int HeaderLength = 6;
-
-        /// <summary>
-        /// Field containing the header for the snep message.
-        /// </summary>
-        protected byte[] snepHeader;
-
-        /// <summary>
-        /// Gets the snep protocol version.
-        /// </summary>
-        /// <value>The snep protocol version.</value>
-        public SnepVersion Version { get; }
-
-        /// <summary>
-        /// Gets the length of the message content.
-        /// </summary>
-        /// <value>The length of the content.</value>
-        public int ContentLength { get; }
+        /// <value>The header.</value>
+        public SnepHeader Header { get; }
 
         /// <summary>
         /// Gets the length of the entire snep message.
         /// </summary>
         /// <value>The length of the message.</value>
-        public int MessageLength => ContentLength + HeaderLength;
+        public int MessageLength => ContentLength + Constants.SnepHeaderLength;
 
         /// <summary>
         /// Gets the message content.
@@ -60,14 +46,55 @@
         /// <param name="message">The snep content.</param>
         protected SnepMessage(SnepVersion version, byte command, NdefMessage message)
         {
-            this.Version = version;
             this.Information = message;
-            this.ContentLength = message?.Length ?? 0;
+            this.Header = new SnepHeader(version, command, message?.Length ?? 0);
+        }
 
-            this.snepHeader = new byte[6];
-            this.snepHeader[0] = (byte)this.Version;
-            this.snepHeader[1] = command;
-            this.ContentLength.ToByteArray().CopyTo(this.snepHeader, 2);
+        /// <summary>
+        /// Creates a <see cref="Stream"/> representation of the message.
+        /// </summary>
+        /// <returns>The stream.</returns>
+        public Stream AsStream()
+        {
+            Stream informationStream = this.InformationAsStream();
+            if (informationStream == null)
+            {
+                return new MemoryStream(this.Header.AsBytes());
+            }
+
+            return new ByteHeaderStream(informationStream, this.Header.AsBytes());
+        }
+
+        /// <summary>
+        /// Creates a stream representation of the information field.
+        /// Can be overridden in subclasses to append information.
+        /// </summary>
+        /// <returns>The information stream.</returns>
+        protected virtual Stream InformationAsStream() => this.Information?.AsStream();
+
+        public static SnepMessage Parse(byte[] bytes)
+        {
+            if (bytes == null)
+            {
+                throw new ArgumentNullException(nameof(bytes));
+            }
+
+            return Parse(bytes, bytes.Length);
+        }
+
+        public static SnepMessage Parse(byte[] bytes, int length)
+        {
+            throw new NotImplementedException();
+        }
+
+        public static SnepMessage FromHeader(SnepHeader header)
+        {
+            throw new NotImplementedException();
+        }
+
+        public static SnepMessage FromNdef(SnepHeader header, NdefMessage message)
+        {
+            throw new NotImplementedException();
         }
     }
 }
