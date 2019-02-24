@@ -19,34 +19,14 @@
         {
         }
 
-        public void Start()
+        public static LogicalLinkControl GetInstance()
         {
-
+            throw new NotImplementedException();
         }
 
-        public int Receive(byte[] buffer)
+        public LlcpSocket CreateLlcpSocket()
         {
-
-        }
-
-        public void Send(byte[] buffer)
-        {
-            if (buffer == null)
-            {
-                throw new ArgumentNullException(nameof(buffer));
-            }
-
-            this.Send(buffer, buffer.Length);
-        }
-
-        public void Send(byte[] buffer, int length)
-        {
-
-        }
-
-        public void Close()
-        {
-
+            throw new NotImplementedException();
         }
 
         /// <summary>
@@ -72,7 +52,7 @@
             this.AgreeMiu();
             if (!mapping.IsInitiator)
             {
-                var paxPdu = CreateParameters();
+                var paxPdu = CreateParameters(mapping);
                 Send(paxPdu);
             }
         }
@@ -85,7 +65,7 @@
             if (mapping.IsInitiator)
             {
                 // TODO: Figure out the other parameters to send. (only the ones not received in the mac mapping)
-                var paxPdu = CreateParameters();
+                var paxPdu = CreateParameters(mapping);
                 remotePax = SendWithResponse(paxPdu);
             }
             else
@@ -108,7 +88,7 @@
                 {
                     new VersionParameter(LlcpVersion.V10)
                 };
-            var paxPdu = new ParameterExchangeUnit(new DataLink(0, 0), parameters);
+            var paxPdu = new ParameterExchangeUnit(new DataLink((LinkAddress)0, (LinkAddress)0), parameters);
             return paxPdu;
         }
 
@@ -120,7 +100,7 @@
 
         private bool AgreeMiu()
         {
-
+            throw new NotImplementedException();
         }
 
         private void NotifyLinkActivationFailed(MacMapping mapping)

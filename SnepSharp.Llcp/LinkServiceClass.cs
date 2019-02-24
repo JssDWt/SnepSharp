@@ -1,6 +1,6 @@
 ﻿namespace SnepSharp.Llcp
 {
-    public enum LinkServiceClass
+    internal enum LinkServiceClass
     {
         Unknown = 0,
         Connectionless = 1,

@@ -1,10 +1,14 @@
 ﻿namespace SnepSharp.Snep
 {
     using System;
+    using System.Collections.Generic;
     using System.IO;
     using SnepSharp.Llcp;
     using SnepSharp.Snep.Messages;
 
+    /// <summary>
+    /// Snep messenger, handles snep message fragmentation and continue responses.
+    /// </summary>
     internal class SnepMessenger : IDisposable
     {
         /// <summary>
@@ -16,20 +20,37 @@
         /// <summary>
         /// The Llcp socket to send messages over.
         /// </summary>
-        private LogicalLinkControl socket;
+        private LlcpSocket socket;
 
-        private byte RemoteContinue;
+        /// <summary>
+        /// Handles to returned <see cref="SnepMessageStream"/>. They will be disposed
+        /// when the current messenger is closed.
+        /// </summary>
+        private List<SnepMessageStream> messageStreams = new List<SnepMessageStream>();
+
+        /// <summary>
+        /// The maximum receive buffer size.
+        /// </summary>
+        private int maxReceiveBufferSize;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="T:SnepSharp.Snep.SnepMessenger"/> class.
         /// </summary>
         /// <param name="isClient"><c>true</c> if client, <c>false</c> is server.</param>
-        public SnepMessenger(bool isClient, LogicalLinkControl socket)
+        public SnepMessenger(bool isClient, LlcpSocket socket, int maxReceiveBufferSize)
         {
             this.socket = socket ?? throw new ArgumentNullException(nameof(socket));
             this.IsClient = isClient;
+            this.maxReceiveBufferSize = maxReceiveBufferSize;
         }
 
+        /// <summary>
+        /// Sends the specified message over the socket.
+        /// </summary>
+        /// <param name="message">Message.</param>
+        /// <exception cref="T:SnepSharp.Snep.SnepException">Thrown when the 
+        /// other party does not return a continue response in a fragmented 
+        /// message.</exception>
         public void SendMessage(SnepMessage message)
         {
             using (var messageStream = message.AsStream())
@@ -54,10 +75,10 @@
                 // Handle them seperately
                 if (message is SnepRequest)
                 {
-                    if (response.Command != (byte)SnepResponseCode.Continue)
+                    if (response.Header.Command != (byte)SnepResponseCode.Continue)
                     {
                         string exmsg = $"Got invalid snep response code '" +
-                            response.Command.ToString("X2") + "', expected '" +
+                            response.Header.Command.ToString("X2") + "', expected '" +
                             ((byte)SnepResponseCode.Continue).ToString("X2") +
                             "' (Continue).";
                         throw new SnepException(exmsg);
@@ -65,10 +86,10 @@
                 }
                 else // message is SnepResponse
                 {
-                    if (response.Command != (byte)SnepRequestCode.Continue)
+                    if (response.Header.Command != (byte)SnepRequestCode.Continue)
                     {
                         string exmsg = $"Got invalid snep request code '" +
-                            response.Command.ToString("X2") + "', expected '" +
+                            response.Header.Command.ToString("X2") + "', expected '" +
                             ((byte)SnepRequestCode.Continue).ToString("X2") +
                             "' (Continue).";
                         throw new SnepException(exmsg);
@@ -87,7 +108,18 @@
             }
         }
 
-        public SnepMessage GetMessage(int maxBufferSize = 16384)
+        /// <summary>
+        /// Gets a snep message over the llcp socket.
+        /// </summary>
+        /// <returns>The received message.</returns>
+        /// <remarks>If the <see cref="SnepMessage"/> would exceed the 
+        /// <see cref="maxReceiveBufferSize"/>, the message is dragged in while
+        /// the message is being read. If the current <see cref="SnepMessenger"/>
+        /// is disposed, the underlying <see cref="Stream"/> of the 
+        /// <see cref="SnepMessage"/> is also disposed. So do not dispose
+        /// the <see cref="SnepMessenger"/> before reading the returned
+        /// messages.</remarks>
+        public SnepMessage GetMessage()
         {
             var receiveBuffer = new byte[socket.MaximumInformationUnit];
             int bytesReceived = socket.Receive(receiveBuffer);
@@ -140,14 +172,16 @@
             }
 
             Stream content;
-            if (header.ContentLength > maxBufferSize)
+            if (header.ContentLength > this.maxReceiveBufferSize)
             {
                 // This message exceeds the buffer size, so drag the message in
                 // as it is read by the client application.
-                content = new SnepMessageStream(receiveBuffer, socket, maxBufferSize);
+                content = new SnepMessageStream(header, receiveBuffer, socket);
+                this.messageStreams.Add((SnepMessageStream)content);
             }
             else
             {
+                // If the message is not large, handle it in memory.
                 content = new MemoryStream();
                 content.Write(
                     receiveBuffer,
@@ -167,27 +201,125 @@
             return SnepMessage.FromNdef(header, NdefMessage.FromStream(content));
         }
 
+        /// <summary>
+        /// Close the messenger and the underlying socket.
+        /// </summary>
         public void Close()
         {
-            this.socket.Close();
+            if (this.messageStreams != null)
+            {
+                // Close any message streams that are using the same socket.
+                foreach (var s in this.messageStreams)
+                {
+                    if (!s.isDisposed)
+                    {
+                        s.Dispose();
+                    }
+                }
+
+                this.messageStreams = null;
+            }
+
+            if (this.socket != null)
+            {
+                this.socket.Close();
+                this.socket = null;
+            }
         }
 
+        /// <summary>
+        /// Calls <see cref="Close"/>.
+        /// </summary>
         void IDisposable.Dispose()
         {
             this.Close();
         }
 
+        /// <summary>
+        /// Snep message stream, drags data in while it is being read.
+        /// </summary>
         private class SnepMessageStream : Stream
         {
-            private int position = Constants.SnepHeaderLength;
-            private byte[] initialFragment;
-            public SnepMessageStream(byte[] initialFragment, LogicalLinkControl socket, int maxBufferSize)
+            /// <summary>
+            /// Value indicating whether the current object has been disposed.
+            /// </summary>
+            public bool isDisposed;
+
+            /// <summary>
+            /// The snep header.
+            /// </summary>
+            private readonly SnepHeader header;
+
+            /// <summary>
+            /// The socket to drag in more data.
+            /// </summary>
+            private LlcpSocket socket;
+
+            /// <summary>
+            /// The internal buffer offset.
+            /// </summary>
+            private int internalOffset;
+
+            /// <summary>
+            /// The amount of bytes left in the internal buffer.
+            /// </summary>
+            private int internalCount;
+
+            /// <summary>
+            /// The internal buffer.
+            /// </summary>
+            private readonly byte[] internalBuffer;
+
+            /// <summary>
+            /// The amount of bytes received over llcp.
+            /// </summary>
+            private int contentBytesReceived;
+
+            /// <summary>
+            /// Value indicating whether the end of the snep message was reached.
+            /// </summary>
+            private bool endReached;
+
+            /// <summary>
+            /// Initializes a new instance of the <see cref="T:SnepSharp.Snep.SnepMessenger.SnepMessageStream"/> class.
+            /// </summary>
+            /// <param name="initialFragment">Initial fragment.</param>
+            /// <param name="socket">Llcp socket.</param>
+            public SnepMessageStream(SnepHeader header, byte[] initialFragment, LlcpSocket socket)
             {
-                this.initialFragment = initialFragment;
+                this.header = header;
+                this.socket = socket;
+                this.internalBuffer = initialFragment;
+                this.internalOffset = Constants.SnepHeaderLength;
+                this.internalCount = initialFragment.Length - this.internalOffset;
+                this.contentBytesReceived = initialFragment.Length - Constants.SnepHeaderLength;
             }
 
+            /// <summary>
+            /// Reads a sequence of bytes from the current stream and advances 
+            /// the position within the stream by the number of bytes read. 
+            /// </summary>
+            /// <remarks>The data is being dragged in over llcp while the stream 
+            /// is read. This way the buffer size will not be large when large
+            /// content is being transferred. However, reads will be slower. This
+            /// Stream is only used when the snep message would otherwise exceed 
+            /// the max buffer size.</remarks>
+            /// <returns>The read.</returns>
+            /// <param name="buffer">An array of bytes. When this method returns, 
+            /// the buffer contains the specified byte array with the values 
+            /// between offset and (offset + count - 1) replaced by the bytes 
+            /// read from the current source.</param>
+            /// <param name="offset">The zero-based byte offset in buffer at 
+            /// which to begin storing the data read from the current stream.</param>
+            /// <param name="count">The maximum number of bytes to be read from 
+            /// the current stream.</param>
             public override int Read(byte[] buffer, int offset, int count)
             {
+                if (this.isDisposed)
+                {
+                    throw new ObjectDisposedException(nameof(SnepMessageStream));
+                }
+
                 if (buffer == null) throw new ArgumentNullException(nameof(buffer));
                 if (offset + count > buffer.Length)
                 {
@@ -209,7 +341,28 @@
                         "count cannot be negative");
                 }
 
+                // Empty the internal buffer first.
+                int currentCount = Math.Min(count, internalCount);
+                Array.Copy(this.internalBuffer, this.internalOffset, buffer, offset, currentCount);
 
+                // If we get here, refill the buffer over llcp.
+                while (!this.endReached && currentCount < count)
+                {
+                    int currentBytes = socket.Receive(this.internalBuffer);
+                    this.contentBytesReceived += currentBytes;
+                    this.internalOffset = 0;
+                    this.internalCount = currentBytes;
+                    if (this.contentBytesReceived >= this.header.ContentLength)
+                    {
+                        endReached = true;
+                    }
+
+                    int extraCount = Math.Min(count - currentCount, internalCount);
+                    Array.Copy(this.internalBuffer, this.internalOffset, buffer, offset + currentCount, extraCount);
+                    currentCount += extraCount;
+                }
+
+                return currentCount;
             }
 
             public override bool CanRead => true;
@@ -218,13 +371,20 @@
             public override long Length => throw new NotSupportedException();
             public override long Position
             {
-                get => throw new NotSupportedException();
+                get => this.contentBytesReceived - this.internalCount + Constants.SnepHeaderLength;
                 set => throw new NotSupportedException();
             }
             public override void Flush() => throw new NotSupportedException();
             public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
             public override void SetLength(long value) => throw new NotSupportedException();
             public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+
+            protected override void Dispose(bool disposing)
+            {
+                base.Dispose(disposing);
+                this.socket = null;
+                this.isDisposed = true;
+            }
         }
     }
 }

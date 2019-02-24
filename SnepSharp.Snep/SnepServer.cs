@@ -30,7 +30,7 @@ namespace SnepSharp.Snep
         /// <summary>
         /// The Service Access Point address of a default snep server.
         /// </summary>
-        public const int DefaultSAPAddress = 4;
+        public const int DefaultSapAddress = 4;
 
         /// <summary>
         /// The service name of the default snep server.
@@ -93,11 +93,11 @@ namespace SnepSharp.Snep
         /// <param name="serviceName">Snep server service name.</param>
         /// <param name="maxPutAcceptSize">Maximum accepted size of PUT messages.</param>
         public SnepServer(ICallBack callback, 
-            int sapAddress = DefaultSAPAddress,
+            int sapAddress = DefaultSapAddress,
             string serviceName = DefaultServiceName,
             int maxPutAcceptSize = DefaultMimimumPutAcceptSize)
         {
-            if (sapAddress == DefaultSAPAddress 
+            if (sapAddress == DefaultSapAddress 
                 && serviceName == DefaultServiceName 
                 && maxPutAcceptSize < DefaultMimimumPutAcceptSize)
             {

@@ -19,7 +19,7 @@
         /// Gets the length of the entire snep message.
         /// </summary>
         /// <value>The length of the message.</value>
-        public int MessageLength => ContentLength + Constants.SnepHeaderLength;
+        public int MessageLength => this.Header.ContentLength + Constants.SnepHeaderLength;
 
         /// <summary>
         /// Gets the message content.

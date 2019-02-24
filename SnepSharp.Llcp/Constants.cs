@@ -5,7 +5,7 @@ namespace SnepSharp.Llcp
     /// <summary>
     /// Constants for the Logical Link Control Protocol.
     /// </summary>
-    public static class Constants
+    internal static class Constants
     {
         /// <summary>
         /// The maximum information units (octets) to send in a PDU.

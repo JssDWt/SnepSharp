@@ -7,7 +7,7 @@
     /// in connectionless transport, or a data link connection in 
     /// connection-oriented transport.
     /// </summary>
-    public struct DataLink : IEquatable<DataLink>
+    internal struct DataLink : IEquatable<DataLink>
     {
         /// <summary>
         /// Gets the Destination Service Access Point (DSAP).

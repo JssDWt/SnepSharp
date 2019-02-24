@@ -3,7 +3,7 @@
     /// <summary>
     /// Class containing constants to use thoughout the library.
     /// </summary>
-    public static class Constants
+    internal static class Constants
     {
         /// <summary>
         /// The default snep version.
@@ -14,5 +14,16 @@
         /// The length of the snep header.
         /// </summary>
         public const int SnepHeaderLength = 6;
+
+        /// <summary>
+        /// The default maximum receive buffer size.
+        /// Defaults to 16 KiB.
+        /// </summary>
+        public const int DefaultMaxReceiveBufferSize = 1024 * 16;
+
+        /// <summary>
+        /// The default maximum response size. Defaults to 1 GiB.
+        /// </summary>
+        public const int DefaultMaxResponseSize = 1024 * 1024 * 1024;
     }
 }

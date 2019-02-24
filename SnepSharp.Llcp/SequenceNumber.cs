@@ -5,7 +5,7 @@
     /// <summary>
     /// Represents a Protocol Data Unit sequence number in the header.
     /// </summary>
-    public struct SequenceNumber
+    internal struct SequenceNumber
     {
         /// <summary>
         /// Gets the sequence number, as used in the PDU header.

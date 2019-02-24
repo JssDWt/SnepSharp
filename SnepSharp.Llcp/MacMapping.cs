@@ -4,7 +4,7 @@ namespace SnepSharp.Llcp
     using System;
     using SnepSharp.Llcp.Parameters;
 
-    public class MacMapping
+    internal class MacMapping
     {
         public ParameterList Parameters { get; }
 

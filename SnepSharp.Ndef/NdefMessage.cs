@@ -42,7 +42,7 @@
 
         public static NdefMessage FromStream(Stream message)
         {
-
+            throw new NotImplementedException();
         }
     }
 }

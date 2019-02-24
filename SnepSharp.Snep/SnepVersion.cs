@@ -3,7 +3,7 @@
     /// <summary>
     /// Snep protocol version.
     /// </summary>
-    public enum SnepVersion
+    internal enum SnepVersion
     {
         V10 = 0x10
     }
