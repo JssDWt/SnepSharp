@@ -29,6 +29,11 @@
             throw new NotImplementedException();
         }
 
+        public LlcpServerSocket CreateLlcpServerSocket()
+        {
+            throw new NotImplementedException();
+        }
+
         /// <summary>
         /// Called when a peer device capable of executing LLCP enters 
         /// communication range and the MAC link activation procedure has been 

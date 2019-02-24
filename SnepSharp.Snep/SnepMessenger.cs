@@ -34,14 +34,24 @@
         private int maxReceiveBufferSize;
 
         /// <summary>
+        /// The maximum size of the content, above which the message will be rejected.
+        /// </summary>
+        private int maxReceiveContentSize;
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="T:SnepSharp.Snep.SnepMessenger"/> class.
         /// </summary>
         /// <param name="isClient"><c>true</c> if client, <c>false</c> is server.</param>
-        public SnepMessenger(bool isClient, LlcpSocket socket, int maxReceiveBufferSize)
+        public SnepMessenger(
+            bool isClient, 
+            LlcpSocket socket, 
+            int maxReceiveBufferSize, 
+            int maxReceiveContentSize)
         {
             this.socket = socket ?? throw new ArgumentNullException(nameof(socket));
             this.IsClient = isClient;
             this.maxReceiveBufferSize = maxReceiveBufferSize;
+            this.maxReceiveContentSize = maxReceiveContentSize;
         }
 
         /// <summary>
@@ -158,6 +168,28 @@
             {
                 // Full message obtained.
                 return SnepMessage.Parse(receiveBuffer, bytesReceived);
+            }
+
+            if (header.ContentLength > this.maxReceiveContentSize)
+            {
+                // Reject too large messages.
+                SnepMessage rejection = this.IsClient
+                    ? (SnepMessage)new SnepRejectRequest()
+                    : new SnepRejectResponse();
+
+                try
+                {
+                    var sendBuffer = new byte[Constants.SnepHeaderLength];
+                    using (var s = rejection.AsStream())
+                    {
+                        s.Read(sendBuffer, 0, Constants.SnepHeaderLength);
+                        socket.Send(sendBuffer);
+                    }
+                }
+                catch
+                {
+                    // squelch
+                }
             }
 
             // Send continue in order to start fetching the next fragments.

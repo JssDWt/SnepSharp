@@ -11,7 +11,7 @@
         ExcessData = 0xC1,
         BadRequest = 0xC2,
         NotImplemented = 0xE0,
-        UnsopportedVersion = 0xE1,
+        UnsupportedVersion = 0xE1,
         Reject = 0xFF
     }
 }

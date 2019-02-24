@@ -18,7 +18,7 @@
         /// </summary>
         /// <param name="version">Snep Protocol version.</param>
         public SnepUnsupportedVersionResponse(SnepVersion version)
-            : base(version, SnepResponseCode.UnsopportedVersion, null)
+            : base(version, SnepResponseCode.UnsupportedVersion, null)
         {
         }
     }

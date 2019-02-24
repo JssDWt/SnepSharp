@@ -127,6 +127,8 @@
         /// </summary>
         public void Connect()
         {
+            if (this.IsConnected) return;
+
             var socket = LogicalLinkControl.GetInstance().CreateLlcpSocket();
             if (this.SapAddress == -1)
             {
@@ -137,7 +139,11 @@
                 socket.ConnectToSap(this.SapAddress);
             }
 
-            this.messenger = new SnepMessenger(true, socket, this.maxReceiveBufferSize);
+            this.messenger = new SnepMessenger(
+                true, 
+                socket, 
+                this.maxReceiveBufferSize, 
+                this.MaxResponseSize);
             this.IsConnected = true;
         }
 
@@ -154,6 +160,7 @@
                 throw new ArgumentNullException(nameof(message));
             }
 
+            this.Connect();
             var snepMessage = new SnepPutRequest(message);
             this.messenger.SendMessage(snepMessage);
 
@@ -162,7 +169,7 @@
             {
                 case SnepResponseCode.Success:
                     break;
-                case SnepResponseCode.UnsopportedVersion:
+                case SnepResponseCode.UnsupportedVersion:
                     throw new SnepException(
                         "Server does not support our snep version.");
                 case SnepResponseCode.BadRequest:
@@ -196,6 +203,7 @@
         public NdefMessage Get(NdefMessage request)
         {
             if (request == null) throw new ArgumentNullException(nameof(request));
+            this.Connect();
             var snepMessage = new SnepGetRequest(request, this.MaxResponseSize);
             this.messenger.SendMessage(snepMessage);
             var response = (SnepResponse)this.messenger.GetMessage();
