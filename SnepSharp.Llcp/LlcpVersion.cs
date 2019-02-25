@@ -1,13 +1,40 @@
 ﻿namespace SnepSharp.Llcp
 {
-    internal struct LlcpVersion
+    using System;
+
+    /// <summary>
+    /// Llcp version.
+    /// </summary>
+    internal struct LlcpVersion : IEquatable<LlcpVersion>, IEquatable<byte>
     {
+        /// <summary>
+        /// The deafult LLCP version; 1.0.
+        /// </summary>
         public static readonly LlcpVersion V10 = (LlcpVersion)0x10;
 
+        /// <summary>
+        /// Gets the major version.
+        /// </summary>
+        /// <value>The major version.</value>
         public int Major { get; }
+
+        /// <summary>
+        /// Gets the minor version.
+        /// </summary>
+        /// <value>The minor version.</value>
         public int Minor { get; }
+
+        /// <summary>
+        /// Gets the version, as transmitted over LLCP.
+        /// </summary>
+        /// <value>The version.</value>
         public byte Version { get; }
 
+        /// <summary>
+        /// Initializes a new instance of the 
+        /// <see cref="T:SnepSharp.Llcp.LlcpVersion"/> struct.
+        /// </summary>
+        /// <param name="version">Version.</param>
         public LlcpVersion(byte version)
         {
             this.Version = version;
@@ -15,11 +42,53 @@
             this.Minor = (version & 0x0F);
         }
 
+        /// <summary>
+        /// Initializes a new instance of the 
+        /// <see cref="T:SnepSharp.Llcp.LlcpVersion"/> struct, with the 
+        /// specified major and minor version.
+        /// </summary>
+        /// <param name="major">Major version.</param>
+        /// <param name="minor">Minor version.</param>
         public LlcpVersion(int major, int minor)
         {
+            if (major > 0x0F || major < 0)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(major),
+                    "Version number should be between 0 and 15, inclusive.");
+            }
+
+            if (minor > 0x0F || minor < 0)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(minor),
+                    "Version number should be between 0 and 15, inclusive.");
+            }
+
             this.Major = major;
             this.Minor = minor;
             this.Version = (byte)((major << 4) | minor);
+        }
+
+        /// <summary>
+        /// Determines whether the specified <see cref="object"/> is equal to the current <see cref="T:Llcp.LinkAddress"/>.
+        /// </summary>
+        /// <param name="obj">The <see cref="object"/> to compare with the current <see cref="T:Llcp.LinkAddress"/>.</param>
+        /// <returns><c>true</c> if the specified <see cref="object"/> is equal to the current <see cref="T:Llcp.LinkAddress"/>;
+        /// otherwise, <c>false</c>.</returns>
+        public override bool Equals(object obj)
+        {
+            if (obj is LlcpVersion)
+            {
+                return this.Equals((LlcpVersion)obj);
+            }
+
+            if (obj is byte)
+            {
+                return this.Equals((byte)obj);
+            }
+
+            return false;
         }
 
         /// <summary>

@@ -6,7 +6,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\SnepSharp.Llcp\SnepSharp.Llcp.csproj" />
-    <ProjectReference Include="..\SnepSharp.Ndef\SnepSharp.Ndef.csproj" />
     <ProjectReference Include="..\SnepSharp.Common\SnepSharp.Common.csproj" />
+    <ProjectReference Include="..\SnepSharp.Ndef\SnepSharp.Ndef.csproj" />
   </ItemGroup>
 </Project>

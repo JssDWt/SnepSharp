@@ -1,7 +1,7 @@
 ﻿namespace SnepSharp.Snep.Messages
 {
     using System.IO;
-    using System.Linq;
+    using SnepSharp.Ndef;
     using SnepSharp.Common;
 
     /// <summary>
@@ -21,25 +21,38 @@
         public SnepRequestCode Request { get; }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="T:Snep.SnepRequestMessage"/> class.
+        /// Initializes a new instance of the <see cref="SnepRequest"/> class.
         /// </summary>
         /// <param name="request">The request code.</param>
         /// <param name="content">The request content.</param>
-        /// <param name="informationPrefix">An optional prefix field to the information field.</param>
-        public SnepRequest(SnepRequestCode request, NdefMessage content, byte[] informationPrefix = null)
-            : this(Constants.DefaultSnepVersion, request, content, informationPrefix)
+        /// <param name="informationPrefix">An optional prefix field to the 
+        /// information field.</param>
+        public SnepRequest(
+            SnepRequestCode request, 
+            INdefMessage content, 
+            byte[] informationPrefix = null)
+            : this(
+                  Constants.DefaultSnepVersion, 
+                  request, 
+                  content, 
+                  informationPrefix)
         {
 
         }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="T:Snep.SnepRequestMessage"/> class.
+        /// Initializes a new instance of the <see cref="SnepRequest"/> class.
         /// </summary>
         /// <param name="version">The snep protocol version.</param>
         /// <param name="request">The request code.</param>
         /// <param name="content">The request content.</param>
-        /// <param name="informationPrefix">An optional prefix field to the information field.</param>
-        public SnepRequest(SnepVersion version, SnepRequestCode request, NdefMessage content, byte[] informationPrefix = null)
+        /// <param name="informationPrefix">An optional prefix field to the 
+        /// information field.</param>
+        public SnepRequest(
+            SnepVersion version, 
+            SnepRequestCode request, 
+            INdefMessage content, 
+            byte[] informationPrefix = null)
             :base(version, (byte)request, content)
         {
             this.Request = request;
@@ -59,7 +72,10 @@
                 return baseStream;
             }
 
-            return new ByteHeaderStream(baseStream, this.informationPrefix, disposeInner: true);
+            return new ByteHeaderStream(
+                baseStream, 
+                this.informationPrefix, 
+                disposeInner: true);
         }
     }
 }

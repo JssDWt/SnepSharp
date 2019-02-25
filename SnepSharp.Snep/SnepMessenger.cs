@@ -4,17 +4,20 @@
     using System.Collections.Generic;
     using System.IO;
     using SnepSharp.Llcp;
+    using SnepSharp.Ndef;
     using SnepSharp.Snep.Messages;
 
     /// <summary>
-    /// Snep messenger, handles snep message fragmentation and continue responses.
+    /// Snep messenger, handles snep message fragmentation and continue 
+    /// responses.
     /// </summary>
     internal class SnepMessenger : IDisposable
     {
         /// <summary>
         /// Gets a value indicating whether this is a client messenger.
         /// </summary>
-        /// <value><c>true</c> if is client messages; <c>false</c> if is server messenger.</value>
+        /// <value><c>true</c> if is client messages; <c>false</c> if is server 
+        /// messenger.</value>
         public bool IsClient { get; }
 
         /// <summary>
@@ -23,34 +26,40 @@
         private LlcpSocket socket;
 
         /// <summary>
-        /// Handles to returned <see cref="SnepMessageStream"/>. They will be disposed
-        /// when the current messenger is closed.
+        /// Handles to returned <see cref="SnepMessageStream"/>. They will be 
+        /// disposed when the current messenger is closed.
         /// </summary>
-        private List<SnepMessageStream> messageStreams = new List<SnepMessageStream>();
+        private List<SnepMessageStream> messageStreams 
+            = new List<SnepMessageStream>();
 
         /// <summary>
-        /// The maximum receive buffer size.
+        /// The ndef message parser.
         /// </summary>
-        private int maxReceiveBufferSize;
+        private INdefParser ndefParser;
 
         /// <summary>
-        /// The maximum size of the content, above which the message will be rejected.
+        /// The maximum size of the content, above which the message will be 
+        /// rejected.
         /// </summary>
-        private int maxReceiveContentSize;
+        private readonly int maxReceiveContentSize;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="T:SnepSharp.Snep.SnepMessenger"/> class.
+        /// Initializes a new instance of the 
+        /// <see cref="T:SnepSharp.Snep.SnepMessenger"/> class.
         /// </summary>
-        /// <param name="isClient"><c>true</c> if client, <c>false</c> is server.</param>
+        /// <param name="isClient"><c>true</c> if client, <c>false</c> is 
+        /// server.</param>
         public SnepMessenger(
             bool isClient, 
             LlcpSocket socket, 
-            int maxReceiveBufferSize, 
+            INdefParser ndefParser, 
             int maxReceiveContentSize)
         {
-            this.socket = socket ?? throw new ArgumentNullException(nameof(socket));
+            this.socket = socket 
+                ?? throw new ArgumentNullException(nameof(socket));
+            this.ndefParser = ndefParser 
+                ?? throw new ArgumentNullException(nameof(ndefParser));
             this.IsClient = isClient;
-            this.maxReceiveBufferSize = maxReceiveBufferSize;
             this.maxReceiveContentSize = maxReceiveContentSize;
         }
 
@@ -65,7 +74,9 @@
         {
             using (var messageStream = message.AsStream())
             {
-                int firstFragmentLength = Math.Min(socket.MaximumInformationUnit, message.MessageLength);
+                int firstFragmentLength = Math.Min(
+                    socket.MaximumInformationUnit, 
+                    message.MessageLength);
                 var sendBuffer = new byte[firstFragmentLength];
                 int bytesRead = messageStream.Read(sendBuffer, 0, firstFragmentLength);
                 socket.Send(sendBuffer, bytesRead);
@@ -123,12 +134,12 @@
         /// </summary>
         /// <returns>The received message.</returns>
         /// <remarks>If the <see cref="SnepMessage"/> would exceed the 
-        /// <see cref="maxReceiveBufferSize"/>, the message is dragged in while
-        /// the message is being read. If the current <see cref="SnepMessenger"/>
-        /// is disposed, the underlying <see cref="Stream"/> of the 
-        /// <see cref="SnepMessage"/> is also disposed. So do not dispose
-        /// the <see cref="SnepMessenger"/> before reading the returned
-        /// messages.</remarks>
+        /// <see cref="INdefParser.MaxBufferSize"/>, the message is dragged in 
+        /// while the message is being read. If the current 
+        /// <see cref="SnepMessenger"/> is disposed, the underlying 
+        /// <see cref="Stream"/> of the <see cref="SnepMessage"/> is also 
+        /// disposed. So do not dispose the <see cref="SnepMessenger"/> before 
+        /// reading the returned messages.</remarks>
         public SnepMessage GetMessage()
         {
             var receiveBuffer = new byte[socket.MaximumInformationUnit];
@@ -203,34 +214,42 @@
                 socket.Send(sendBuffer);
             }
 
-            Stream content;
-            if (header.ContentLength > this.maxReceiveBufferSize)
+            INdefMessage content;
+            if (header.ContentLength > this.ndefParser.MaxBufferSize)
             {
                 // This message exceeds the buffer size, so drag the message in
                 // as it is read by the client application.
-                content = new SnepMessageStream(header, receiveBuffer, socket);
-                this.messageStreams.Add((SnepMessageStream)content);
+                var contentStream = new SnepMessageStream(
+                    header, 
+                    receiveBuffer, 
+                    socket);
+                this.messageStreams.Add(contentStream);
+                content = this.ndefParser.ParseMessage(contentStream);
             }
             else
             {
                 // If the message is not large, handle it in memory.
-                content = new MemoryStream();
-                content.Write(
+                var contentStream = new MemoryStream();
+                contentStream.Write(
                     receiveBuffer,
                     Constants.SnepHeaderLength,
                     receiveBuffer.Length - Constants.SnepHeaderLength);
 
-                while (bytesReceived < header.ContentLength + Constants.SnepHeaderLength)
+                while (bytesReceived < 
+                    header.ContentLength + Constants.SnepHeaderLength)
                 {
                     int currentBytes = socket.Receive(receiveBuffer);
                     bytesReceived += currentBytes;
-                    content.Write(receiveBuffer, 0, currentBytes);
+                    contentStream.Write(receiveBuffer, 0, currentBytes);
                 }
 
-                content.Seek(0, SeekOrigin.Begin);
+                content = this.ndefParser.ParseMessage(
+                    contentStream.ToArray(),
+                    0,
+                    bytesReceived - Constants.SnepHeaderLength);
             }
 
-            return SnepMessage.FromNdef(header, NdefMessage.FromStream(content));
+            return SnepMessage.FromNdef(header, content);
         }
 
         /// <summary>

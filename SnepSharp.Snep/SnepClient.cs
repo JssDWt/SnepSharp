@@ -4,9 +4,11 @@
     using System.IO;
     using SnepSharp.Llcp;
     using SnepSharp.Snep.Messages;
+    using SnepSharp.Ndef;
 
     /// <summary>
-    /// Snep client to interchange <see cref="NdefMessage"/> with a SNEP server.
+    /// Snep client to interchange <see cref="INdefMessage"/> with a SNEP 
+    /// server.
     /// </summary>
     public class SnepClient : IDisposable
     {
@@ -16,10 +18,9 @@
         private SnepMessenger messenger;
 
         /// <summary>
-        /// The maximum receive buffer size.
+        /// The ndef parser.
         /// </summary>
-        private int maxReceiveBufferSize =
-            Constants.DefaultMaxReceiveBufferSize;
+        private readonly INdefParser ndefParser;
 
         /// <summary>
         /// The maximum allowed response size for GET requests.
@@ -31,8 +32,10 @@
         /// <see cref="T:SnepSharp.Snep.SnepClient"/> class, that connects to
         /// the default snep server.
         /// </summary>
-        public SnepClient()
+        public SnepClient(INdefParser ndefParser)
         {
+            this.ndefParser = ndefParser 
+                ?? throw new ArgumentNullException(nameof(ndefParser));
             this.ServiceName = SnepServer.DefaultServiceName;
             this.SapAddress = SnepServer.DefaultSapAddress;
         }
@@ -43,16 +46,13 @@
         /// the specified service name.
         /// </summary>
         /// <param name="serviceName">Service name.</param>
-        public SnepClient(string serviceName)
+        public SnepClient(string serviceName, INdefParser ndefParser)
         {
-            if (string.IsNullOrEmpty(serviceName))
-            {
-                throw new ArgumentException(
-                    "Cannot be null or empty", 
-                    nameof(serviceName));
-            }
+            this.ServiceName = serviceName
+                ?? throw new ArgumentNullException(nameof(serviceName));
 
-            this.ServiceName = serviceName;
+            this.ndefParser = ndefParser
+                ?? throw new ArgumentNullException(nameof(ndefParser));
         }
 
         /// <summary>
@@ -76,33 +76,6 @@
         public bool IsConnected { get; private set; }
 
         /// <summary>
-        /// Gets or sets the maximum receive buffer size.
-        /// </summary>
-        /// <remarks>If a response to a GET request exceeds the receive
-        /// buffer size, the data is fetched from the remote server while the
-        /// <see cref="NdefMessage"/> is read. Closing the 
-        /// <see cref="SnepClient"/> will also close the underlying 
-        /// <see cref="Stream"/> in the <see cref="NdefMessage"/>. So do not 
-        /// close the <see cref="SnepClient"/> until the message was read.
-        /// </remarks>
-        /// <value>The size of the max receive buffer.</value>
-        public int MaxReceiveBufferSize 
-        {
-            get => this.maxReceiveBufferSize;
-            set
-            {
-                if (value < 1)
-                {
-                    throw new ArgumentOutOfRangeException(
-                        nameof(MaxReceiveBufferSize),
-                        "Must be positive.");
-                }
-
-                this.maxReceiveBufferSize = value;
-            }
-        }
-
-        /// <summary>
         /// Gets or sets the maximum allowed response size for GET requests.
         /// </summary>
         /// <value>The maximum response size.</value>
@@ -114,7 +87,7 @@
                 if (value < Constants.SnepHeaderLength)
                 {
                     throw new ArgumentOutOfRangeException(
-                        nameof(MaxReceiveBufferSize),
+                        nameof(MaxResponseSize),
                         $"Must be greater than {Constants.SnepHeaderLength}.");
                 }
 
@@ -142,7 +115,7 @@
             this.messenger = new SnepMessenger(
                 true, 
                 socket, 
-                this.maxReceiveBufferSize, 
+                this.ndefParser, 
                 this.MaxResponseSize);
             this.IsConnected = true;
         }
@@ -153,7 +126,7 @@
         /// <param name="message">Message to put.</param>
         /// <exception cref="SnepException">Thrown if any protocol related issue
         /// is encountered.</exception>
-        public void Put(NdefMessage message)
+        public void Put(INdefMessage message)
         {
             if (message == null)
             {
@@ -194,13 +167,13 @@
         /// <exception cref="T:SnepSharp.Snep.SnepException">Thrown if any 
         /// protocol related issue is encountered.</exception>
         /// <remarks>If a response to a GET request exceeds the 
-        /// <see cref="MaxReceiveBufferSize"/>, the data is fetched from the 
-        /// remote server while the <see cref="NdefMessage"/> is read. Closing 
-        /// the <see cref="SnepClient"/> will also close the underlying 
-        /// <see cref="Stream"/> in the <see cref="NdefMessage"/>. So do not 
+        /// <see cref="INdefParser.MaxBufferSize"/>, the data is fetched from 
+        /// the remote server while the <see cref="INdefMessage"/> is read. 
+        /// Closing the <see cref="SnepClient"/> will also close the underlying 
+        /// <see cref="Stream"/> in the <see cref="INdefMessage"/>. So do not 
         /// close the <see cref="SnepClient"/> until the message was read.
         /// </remarks>
-        public NdefMessage Get(NdefMessage request)
+        public INdefMessage Get(INdefMessage request)
         {
             if (request == null) throw new ArgumentNullException(nameof(request));
             this.Connect();
@@ -208,7 +181,7 @@
             this.messenger.SendMessage(snepMessage);
             var response = (SnepResponse)this.messenger.GetMessage();
 
-            NdefMessage result;
+            INdefMessage result;
             switch (response.Response)
             {
                 case SnepResponseCode.Success:
@@ -218,13 +191,20 @@
                     result = null;
                     break;
                 case SnepResponseCode.ExcessData:
-                    throw new SnepException("Getting the specified message would result in exceeding the MaxResponseSize.");
+                    throw new SnepException(
+                        "Getting the specified message would result in " +
+                        "exceeding the MaxResponseSize.");
                 case SnepResponseCode.BadRequest:
-                    throw new SnepException("Server indicates the request has malformed syntax.");
+                    throw new SnepException(
+                        "Server indicates the request has malformed syntax.");
                 case SnepResponseCode.NotImplemented:
-                    throw new SnepException("Server does not implement the required functionality to process the request.");
+                    throw new SnepException(
+                        "Server does not implement the required functionality " 
+                        + "to process the request.");
                 default:
-                    throw new SnepException($"Received unexpected response code from server: {response.Response.ToString()}");
+                    throw new SnepException(
+                        "Received unexpected response code from server: '" +
+                        $"{response.Response.ToString()}'.");
             }
 
             return result;
@@ -237,7 +217,14 @@
         /// </summary>
         public void Close()
         {
-            this.Dispose(true);
+            if (this.messenger != null)
+            {
+                this.messenger.Close();
+                this.messenger = null;
+            }
+
+            // Release the parser, in case it is IDisposable.
+            this.IsConnected = false;
         }
 
         /// <summary>
@@ -245,7 +232,7 @@
         /// </summary>
         void IDisposable.Dispose()
         {
-            this.Close();
+            this.Dispose(true);
         }
 
         /// <summary>
@@ -256,14 +243,8 @@
         {
             if (disposing)
             {
-                if (this.messenger != null)
-                {
-                    this.messenger.Close();
-                    this.messenger = null;
-                }
+                this.Close();
             }
-
-            this.IsConnected = false;
         }
     }
 }

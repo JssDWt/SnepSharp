@@ -1,14 +1,15 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
-using SnepSharp.Llcp;
-using SnepSharp.Snep.Messages;
-
-namespace SnepSharp.Snep
+﻿namespace SnepSharp.Snep
 {
+    using System;
+    using System.Collections.Generic;
+    using System.Threading;
+    using System.Threading.Tasks;
+    using SnepSharp.Llcp;
+    using SnepSharp.Ndef;
+    using SnepSharp.Snep.Messages;
+
     /// <summary>
-    /// Snep client to interchange <see cref="NdefMessage"/> with a SNEP client.
+    /// Snep client to interchange <see cref="INdefMessage"/> with a SNEP client.
     /// </summary>
     public class SnepServer : IDisposable
     {
@@ -21,7 +22,7 @@ namespace SnepSharp.Snep
             /// Callback method invoked when a snep client requests a resource 
             /// from the server.
             /// </summary>
-            NdefMessage OnGet(NdefMessage message);
+            INdefMessage OnGet(INdefMessage message);
 
             /// <summary>
             /// Callback method invoked when a snep client puts a resource to 
@@ -31,7 +32,7 @@ namespace SnepSharp.Snep
             /// assumed the message was successfully processed by the 
             /// application. If an exception is thrown, it is assumed the 
             /// request was a bad request.</remarks>
-            void OnPut(NdefMessage message);
+            void OnPut(INdefMessage message);
         }
 
         /// <summary>
@@ -65,10 +66,9 @@ namespace SnepSharp.Snep
         private ICallBack callback;
 
         /// <summary>
-        /// The maximum receive buffer size.
+        /// The ndef message parser.
         /// </summary>
-        private int maxReceiveBufferSize =
-            Constants.DefaultMaxReceiveBufferSize;
+        private readonly INdefParser ndefParser;
 
         /// <summary>
         /// The maximum allowed request size for PUT requests.
@@ -114,33 +114,6 @@ namespace SnepSharp.Snep
         public string ServiceName { get; }
 
         /// <summary>
-        /// Gets or sets the maximum receive buffer size.
-        /// </summary>
-        /// <remarks>If a PUT request request exceeds the receive
-        /// buffer size, the data is fetched from the snep client while the
-        /// <see cref="NdefMessage"/> is read. Closing the 
-        /// <see cref="SnepServer"/> will also close the underlying 
-        /// <see cref="Stream"/> in the <see cref="NdefMessage"/>. So do not 
-        /// close the <see cref="SnepServer"/> until the message was read.
-        /// </remarks>
-        /// <value>The size of the max receive buffer.</value>
-        public int MaxReceiveBufferSize
-        {
-            get => this.maxReceiveBufferSize;
-            set
-            {
-                if (value < 1)
-                {
-                    throw new ArgumentOutOfRangeException(
-                        nameof(MaxReceiveBufferSize),
-                        "Must be positive.");
-                }
-
-                this.maxReceiveBufferSize = value;
-            }
-        }
-
-        /// <summary>
         /// Gets or sets the maximum allowed response size for GET requests.
         /// </summary>
         /// <value>The maximum response size.</value>
@@ -152,7 +125,7 @@ namespace SnepSharp.Snep
                 if (value < Constants.SnepHeaderLength)
                 {
                     throw new ArgumentOutOfRangeException(
-                        nameof(MaxReceiveBufferSize),
+                        nameof(MaxRequestSize),
                         $"Must be greater than {Constants.SnepHeaderLength}.");
                 }
 
@@ -170,21 +143,24 @@ namespace SnepSharp.Snep
         }
 
         /// <summary>
-        /// Initializes a new instance of the 
-        /// <see cref="T:SnepSharp.Snep.SnepServer"/> class.
+        /// Initializes a new instance of the <see cref="SnepServer"/> class.
         /// </summary>
         /// <param name="callback">Callback implementation.</param>
         /// <param name="sapAddress">Service Access Point address for the snep 
         /// server.</param>
         /// <param name="serviceName">Snep server service name.</param>
-        public SnepServer(ICallBack callback, 
+        public SnepServer(
+            ICallBack callback, 
+            INdefParser ndefParser,
             int sapAddress = DefaultSapAddress,
             string serviceName = DefaultServiceName)
         {
             this.SapAddress = sapAddress;
             this.ServiceName = serviceName;
-            this.callback = callback ?? throw new ArgumentNullException(
-                nameof(callback));
+            this.callback = callback 
+                ?? throw new ArgumentNullException(nameof(callback));
+            this.ndefParser = ndefParser
+                ?? throw new ArgumentNullException(nameof(ndefParser));
         }
 
         /// <summary>
@@ -234,6 +210,10 @@ namespace SnepSharp.Snep
             }
         }
 
+        /// <summary>
+        /// Runs the server, accepting client connections.
+        /// </summary>
+        /// <param name="token">Token.</param>
         private void RunServer(CancellationToken token)
         {
             // While loop to handle exceptions
@@ -292,7 +272,7 @@ namespace SnepSharp.Snep
             var messenger = new SnepMessenger(
                 false, 
                 socket, 
-                this.maxReceiveBufferSize, 
+                this.ndefParser, 
                 this.maxRequestSize);
 
             bool close = false;
@@ -306,7 +286,7 @@ namespace SnepSharp.Snep
                     {
                         request = (SnepRequest)messenger.GetMessage();
                     }
-                    catch (SnepException ex)
+                    catch (SnepException)
                     {
                         try
                         {
@@ -333,7 +313,7 @@ namespace SnepSharp.Snep
                     switch (request.Request)
                     {
                         case SnepRequestCode.Get:
-                            NdefMessage appMessage = null;
+                            INdefMessage appMessage = null;
 
                             try
                             {
@@ -353,7 +333,7 @@ namespace SnepSharp.Snep
                                         appMessage);
                                 }
                             }
-                            catch (Exception ex)
+                            catch (Exception)
                             {
                                 response = new SnepBadRequestResponse();
                             }
@@ -369,7 +349,7 @@ namespace SnepSharp.Snep
 
                                 response = new SnepSuccessResponse(null);
                             }
-                            catch (Exception ex)
+                            catch (Exception)
                             {
                                 response = new SnepBadRequestResponse();
                             }
@@ -383,7 +363,7 @@ namespace SnepSharp.Snep
 
                     messenger.SendMessage(response);
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
                     // TODO: log.
                 }
@@ -392,16 +372,15 @@ namespace SnepSharp.Snep
 
         /// <summary>
         /// Releases all resources used by the 
-        /// <see cref="T:SnepSharp.Snep.SnepServer"/> object.
+        /// <see cref="SnepServer"/> object.
         /// </summary>
-        /// <remarks>Call <see cref="Dispose"/> when you are finished using the 
-        /// <see cref="T:SnepSharp.Snep.SnepServer"/>. The <see cref="Dispose"/> 
-        /// method leaves the <see cref="T:SnepSharp.Snep.SnepServer"/> in an 
-        /// unusable state. After calling <see cref="Dispose"/>, you must 
-        /// release all references to the 
-        /// <see cref="T:SnepSharp.Snep.SnepServer"/> so the garbage collector 
-        /// can reclaim the memory that the 
-        /// <see cref="T:SnepSharp.Snep.SnepServer"/> was occupying.</remarks>
+        /// <remarks>Call <see cref="Dispose()"/> when you are finished using 
+        /// the <see cref="SnepServer"/>. The <see cref="Dispose()"/> method 
+        /// leaves the <see cref="SnepServer"/> in an unusable state. After 
+        /// calling <see cref="Dispose()"/>, you must release all references to 
+        /// the <see cref="SnepServer"/> so the garbage collector can reclaim 
+        /// the memory that the <see cref="SnepServer"/> was occupying.
+        /// </remarks>
         public void Dispose()
         {
             Dispose(true);
@@ -413,20 +392,21 @@ namespace SnepSharp.Snep
         /// <param name="disposing">If set to <c>true</c> disposing.</param>
         protected virtual void Dispose(bool disposing)
         {
-            if (!isDisposed)
+            if (!this.isDisposed)
             {
                 if (disposing)
                 {
-                    if (this.cancel != null)
+                    try
                     {
-                        this.cancel.Dispose();
-                        this.cancel = null;
+                        this.Stop().Wait();
+                    }
+                    catch
+                    {
+                        // squelch.
                     }
                 }
 
-                this.callback = null;
-                this.serverTask = null;
-                isDisposed = true;
+                this.isDisposed = true;
             }
         }
 
