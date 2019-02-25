@@ -1,4 +1,25 @@
-﻿namespace SnepSharp.Llcp.Pdus
+﻿//
+//  AggregatedFrameUnit.cs
+//
+//  Author:
+//       Jesse de Wit <witdejesse@hotmail.com>
+//
+//  Copyright (c) 2019 
+//
+//  This program is free software: you can redistribute it and/or modify
+//  it under the terms of the GNU General Public License as published by
+//  the Free Software Foundation, either version 3 of the License, or
+//  (at your option) any later version.
+//
+//  This program is distributed in the hope that it will be useful,
+//  but WITHOUT ANY WARRANTY; without even the implied warranty of
+//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//  GNU General Public License for more details.
+//
+//  You should have received a copy of the GNU General Public License
+//  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+namespace SnepSharp.Llcp.Pdus
 {
     using System;
     using System.Collections.Generic;
@@ -12,14 +33,19 @@
     internal class AggregatedFrameUnit : ProtocolDataUnit
     {
         /// <summary>
-        /// Initializes a new instance of the <see cref="T:Llcp.AggregatedFrameUnit"/> class.
+        /// Initializes a new instance of the <see cref="AggregatedFrameUnit"/> 
+        /// class.
         /// </summary>
         /// <param name="connection">Data link connection.</param>
         /// <param name="aggregate">Aggregate of protocol data units.</param>
         public AggregatedFrameUnit(
             DataLink connection, 
             ICollection<ProtocolDataUnit> aggregate)
-            : base(connection, ProtocolDataUnitType.AggregatedFrame, null, ToBytes(aggregate))
+            : base(
+                  connection, 
+                  ProtocolDataUnitType.AggregatedFrame, 
+                  null, 
+                  ToBytes(aggregate))
         {
 
         }
@@ -38,12 +64,17 @@
 
             if (aggregate.Count < 2)
             {
-                throw new ArgumentException("At least two subunits should be supplied.", nameof(aggregate));
+                throw new ArgumentException(
+                    "At least two subunits should be supplied.", 
+                    nameof(aggregate));
             }
 
-            if (aggregate.Any(pdu => pdu is AggregatedFrameUnit || pdu is SymmetryUnit))
+            if (aggregate.Any(
+                pdu => pdu is AggregatedFrameUnit || pdu is SymmetryUnit))
             {
-                throw new ArgumentException("Aggregate cannot contain aggregate or symmetry pdus.", nameof(aggregate));
+                throw new ArgumentException(
+                    "Aggregate cannot contain aggregate or symmetry pdus.", 
+                    nameof(aggregate));
             }
 
             // NOTE: first two bytes of each unit contain length, then data.
@@ -60,7 +91,5 @@
             if (data == null) throw new ArgumentNullException(nameof(data));
             throw new NotImplementedException();
         }
-
-
     }
 }

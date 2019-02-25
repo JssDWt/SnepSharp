@@ -1,4 +1,25 @@
-﻿namespace SnepSharp.Llcp
+﻿//
+//  DataLink.cs
+//
+//  Author:
+//       Jesse de Wit <witdejesse@hotmail.com>
+//
+//  Copyright (c) 2019 
+//
+//  This program is free software: you can redistribute it and/or modify
+//  it under the terms of the GNU General Public License as published by
+//  the Free Software Foundation, either version 3 of the License, or
+//  (at your option) any later version.
+//
+//  This program is distributed in the hope that it will be useful,
+//  but WITHOUT ANY WARRANTY; without even the implied warranty of
+//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//  GNU General Public License for more details.
+//
+//  You should have received a copy of the GNU General Public License
+//  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+namespace SnepSharp.Llcp
 {
     using System;
 
@@ -22,7 +43,7 @@
         public LinkAddress Source { get; }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="T:Llcp.LogicalDataLink"/> struct.
+        /// Initializes a new instance of the <see cref="DataLink"/> struct.
         /// </summary>
         /// <param name="source">The Source Service Access Point.</param>
         /// <param name="destination">The Destination Service Access Point.</param>
@@ -33,11 +54,14 @@
         }
 
         /// <summary>
-        /// Determines whether the specified <see cref="object"/> is equal to the current <see cref="T:Llcp.LogicalDataLink"/>.
+        /// Determines whether the specified <see cref="object"/> is equal to 
+        /// the current <see cref="DataLink"/>.
         /// </summary>
-        /// <param name="obj">The <see cref="object"/> to compare with the current <see cref="T:Llcp.LogicalDataLink"/>.</param>
-        /// <returns><c>true</c> if the specified <see cref="object"/> is equal to the current
-        /// <see cref="T:Llcp.LogicalDataLink"/>; otherwise, <c>false</c>.</returns>
+        /// <param name="obj">The <see cref="object"/> to compare with the 
+        /// current <see cref="DataLink"/>.</param>
+        /// <returns><c>true</c> if the specified <see cref="object"/> is equal 
+        /// to the current <see cref="DataLink"/>; otherwise, <c>false</c>.
+        /// </returns>
         public override bool Equals(object obj)
         {
             if (!(obj is DataLink)) return false;
@@ -45,19 +69,23 @@
         }
 
         /// <summary>
-        /// Determines whether the specified <see cref="Llcp.DataLink"/> is equal to the current <see cref="T:Llcp.LogicalDataLink"/>.
+        /// Determines whether the specified <see cref="DataLink"/> is equal to 
+        /// the current <see cref="DataLink"/>.
         /// </summary>
-        /// <param name="other">The <see cref="Llcp.DataLink"/> to compare with the current <see cref="T:Llcp.LogicalDataLink"/>.</param>
-        /// <returns><c>true</c> if the specified <see cref="Llcp.DataLink"/> is equal to the current
-        /// <see cref="T:Llcp.LogicalDataLink"/>; otherwise, <c>false</c>.</returns>
+        /// <param name="other">The <see cref="DataLink"/> to compare with the 
+        /// current <see cref="DataLink"/>.</param>
+        /// <returns><c>true</c> if the specified <see cref="DataLink"/> is 
+        /// equal to the current <see cref="DataLink"/>; otherwise, 
+        /// <c>false</c>.</returns>
         public bool Equals(DataLink other)
             => this.Destination == other.Destination && this.Source == other.Source;
 
         /// <summary>
-        /// Serves as a hash function for a <see cref="T:Llcp.LogicalDataLink"/> object.
+        /// Serves as a hash function for a <see cref="DataLink"/> object.
         /// </summary>
-        /// <returns>A hash code for this instance that is suitable for use in hashing algorithms and data structures such as a
-        /// hash table.</returns>
+        /// <returns>A hash code for this instance that is suitable for use in 
+        /// hashing algorithms and data structures such as a hash table.
+        /// </returns>
         public override int GetHashCode()
         {
             int hash = 4663;
@@ -71,23 +99,30 @@
         }
 
         /// <summary>
-        /// Determines whether a specified instance of <see cref="Llcp.DataLink"/> is equal to another specified <see cref="Llcp.DataLink"/>.
+        /// Determines whether a specified instance of <see cref="DataLink"/> is 
+        /// equal to another specified <see cref="Llcp.DataLink"/>.
         /// </summary>
-        /// <param name="l1">The first <see cref="Llcp.DataLink"/> to compare.</param>
-        /// <param name="l2">The second <see cref="Llcp.DataLink"/> to compare.</param>
-        /// <returns><c>true</c> if <c>l1</c> and <c>l2</c> are equal; otherwise, <c>false</c>.</returns>
+        /// <param name="l1">The first <see cref="Llcp.DataLink"/> to compare.
+        /// </param>
+        /// <param name="l2">The second <see cref="Llcp.DataLink"/> to compare.
+        /// </param>
+        /// <returns><c>true</c> if <c>l1</c> and <c>l2</c> are equal; 
+        /// otherwise, <c>false</c>.</returns>
         public static bool operator ==(DataLink l1, DataLink l2)
         {
             return l1.Equals(l2);
         }
 
         /// <summary>
-        /// Determines whether a specified instance of <see cref="Llcp.DataLink"/> is not equal to another
-        /// specified <see cref="Llcp.DataLink"/>.
+        /// Determines whether a specified instance of <see cref="DataLink"/> is 
+        /// not equal to another specified <see cref="Llcp.DataLink"/>.
         /// </summary>
-        /// <param name="l1">The first <see cref="Llcp.DataLink"/> to compare.</param>
-        /// <param name="l2">The second <see cref="Llcp.DataLink"/> to compare.</param>
-        /// <returns><c>true</c> if <c>l1</c> and <c>l2</c> are not equal; otherwise, <c>false</c>.</returns>
+        /// <param name="l1">The first <see cref="Llcp.DataLink"/> to compare.
+        /// </param>
+        /// <param name="l2">The second <see cref="Llcp.DataLink"/> to compare.
+        /// </param>
+        /// <returns><c>true</c> if <c>l1</c> and <c>l2</c> are not equal; 
+        /// otherwise, <c>false</c>.</returns>
         public static bool operator !=(DataLink l1, DataLink l2)
         {
             return !l1.Equals(l2);
