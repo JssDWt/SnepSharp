@@ -1,6 +1,7 @@
 ﻿namespace SnepSharp.Snep.Messages
 {
     using System;
+    using System.IO;
     using SnepSharp.Common;
     using SnepSharp.Ndef;
 
@@ -54,5 +55,20 @@
 
             this.MaxResponseLength = maxResponseLength;
         }
+
+        public const int ParseOffset = 4;
+        public static int GetMaxResponseLength(Stream stream)
+        {
+            var buffer = new byte[4];
+            stream.Read(buffer, 0, buffer.Length);
+            return IntExtensions.FromByteArray(buffer);
+        }
+
+        public static int GetMaxResponseLength(byte[] bytes)
+        {
+            return IntExtensions.FromByteArray(bytes);
+        }
+
+
     }
 }

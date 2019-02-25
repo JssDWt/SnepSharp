@@ -1,6 +1,5 @@
 ﻿namespace SnepSharp.Snep.Messages
 {
-    using System;
     using System.IO;
     using SnepSharp.Common;
     using SnepSharp.Ndef;
@@ -8,7 +7,7 @@
     /// <summary>
     /// Snep message base class.
     /// </summary>
-    internal class SnepMessage
+    internal abstract class SnepMessage
     {
         /// <summary>
         /// Gets the snep header of the message.
@@ -83,21 +82,140 @@
         protected virtual Stream InformationAsStream() 
             => this.Information?.AsStream();
 
+        /// <summary>
+        /// Creates a snep message from the specified SNEP header.
+        /// </summary>
+        /// <returns>The header, or null if a message could not be created from
+        /// the header alone.</returns>
+        /// <param name="header">Header.</param>
         public static SnepMessage FromHeader(SnepHeader header)
         {
-            throw new NotImplementedException();
+            // request get, put
+            // response success
+            switch (header.Command)
+            {
+                case (byte)SnepRequestCode.Continue:
+                    return new SnepContinueRequest(header.Version);
+                case (byte)SnepRequestCode.Reject:
+                    return new SnepRejectRequest(header.Version);
+                case (byte)SnepResponseCode.BadRequest:
+                    return new SnepBadRequestResponse(header.Version);
+                case (byte)SnepResponseCode.Continue:
+                    return new SnepContinueResponse(header.Version);
+                case (byte)SnepResponseCode.ExcessData:
+                    return new SnepExcessDataResponse(header.Version);
+                case (byte)SnepResponseCode.NotFound:
+                    return new SnepNotFoundResponse(header.Version);
+                case (byte)SnepResponseCode.NotImplemented:
+                    return new SnepNotImplementedResponse(header.Version);
+                case (byte)SnepResponseCode.Reject:
+                    return new SnepRejectResponse(header.Version);
+                case (byte)SnepResponseCode.UnsupportedVersion:
+                    return new SnepUnsupportedVersionResponse(header.Version);
+                default:
+                    return null;
+            }
         }
 
-        public static SnepMessage FromNdef(
+        /// <summary>
+        /// Creates a <see cref="SnepMessage"/> subclass from the specified 
+        /// <see cref="Stream"/>.
+        /// </summary>
+        /// <returns>The parsed message.</returns>
+        /// <param name="header">Snep header indicating message type.</param>
+        /// <param name="stream">Stream with pointer at the information part
+        /// of the message.</param>
+        /// <param name="ndefParser">Ndef parser.</param>
+        public static SnepMessage FromStream(
             SnepHeader header, 
-            INdefMessage message)
+            Stream stream,
+            INdefParser ndefParser)
         {
-            throw new NotImplementedException();
+            var small = FromHeader(header);
+            if (small != null) return small;
+
+            // Handle all cases where an information field is involved.
+            switch (header.Command)
+            {
+                case (byte)SnepRequestCode.Get:
+                    int maxResponseLength =
+                        SnepGetRequest.GetMaxResponseLength(stream);
+                    return new SnepGetRequest(
+                        header.Version,
+                        ndefParser.ParseMessage(stream),
+                        maxResponseLength);
+                case (byte)SnepRequestCode.Put:
+                    return new SnepPutRequest(
+                        header.Version,
+                        ndefParser.ParseMessage(stream));
+                case (byte)SnepResponseCode.Success:
+                    return new SnepSuccessResponse(
+                        header.Version,
+                        ndefParser.ParseMessage(stream));
+                default:
+                    throw new SnepException(
+                        "Could not parse snep message, unknown type.");
+            }
         }
 
-        public static SnepMessage Parse(byte[] message, int count)
+        /// <summary>
+        /// Creates a <see cref="SnepMessage"/> subclass from the specified 
+        /// <see cref="byte[]"/>.
+        /// </summary>
+        /// <returns>The parsed message.</returns>
+        /// <param name="message">Array containing the message, including 
+        /// header. The first byte of the array should be the first header byte.
+        /// </param>
+        /// <param name="count">The amount of bytes the message contains.
+        /// </param>
+        /// <param name="ndefParser">Ndef parser.</param>
+        public static SnepMessage Parse(
+            byte[] message,
+            int count, 
+            INdefParser ndefParser)
         {
-            throw new NotImplementedException();
+            if (count < Constants.SnepHeaderLength)
+            {
+                throw new SnepException("Message too small.");
+            }
+
+            var header = SnepHeader.FromBytes(message);
+            var small = FromHeader(header);
+            if (small != null) return small;
+
+            // Handle all cases where an information field is involved.
+            switch (header.Command)
+            {
+                case (byte)SnepRequestCode.Get:
+                    int maxResponseLength =
+                        SnepGetRequest.GetMaxResponseLength(message);
+                    return new SnepGetRequest(
+                        header.Version,
+                        ndefParser.ParseMessage(
+                            message,
+                            Constants.SnepHeaderLength 
+                                  + SnepGetRequest.ParseOffset,
+                            count - Constants.SnepHeaderLength 
+                                  - SnepGetRequest.ParseOffset),
+                        maxResponseLength);
+                case (byte)SnepRequestCode.Put:
+                    return new SnepPutRequest(
+                        header.Version,
+                        ndefParser.ParseMessage(
+                            message, 
+                            Constants.SnepHeaderLength, 
+                            count - Constants.SnepHeaderLength));
+                case (byte)SnepResponseCode.Success:
+                    return new SnepSuccessResponse(
+                        header.Version,
+                        ndefParser.ParseMessage(
+                            message, 
+                            Constants.SnepHeaderLength, 
+                            count - Constants.SnepHeaderLength));
+                default:
+                    throw new SnepException(
+                        "Could not parse snep message, unknown type.");
+            }
         }
     }
 }

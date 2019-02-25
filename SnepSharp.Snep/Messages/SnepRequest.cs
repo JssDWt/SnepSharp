@@ -7,7 +7,7 @@
     /// <summary>
     /// Snep request message.
     /// </summary>
-    internal class SnepRequest : SnepMessage
+    internal abstract class SnepRequest : SnepMessage
     {
         /// <summary>
         /// Prefix for the information field.
@@ -27,7 +27,7 @@
         /// <param name="content">The request content.</param>
         /// <param name="informationPrefix">An optional prefix field to the 
         /// information field.</param>
-        public SnepRequest(
+        protected SnepRequest(
             SnepRequestCode request, 
             INdefMessage content, 
             byte[] informationPrefix = null)
@@ -48,7 +48,7 @@
         /// <param name="content">The request content.</param>
         /// <param name="informationPrefix">An optional prefix field to the 
         /// information field.</param>
-        public SnepRequest(
+        protected SnepRequest(
             SnepVersion version, 
             SnepRequestCode request, 
             INdefMessage content, 

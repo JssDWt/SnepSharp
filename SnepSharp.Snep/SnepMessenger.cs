@@ -90,7 +90,10 @@
                 // Wait for continue.
                 var receiveBuffer = new byte[this.socket.MaximumInformationUnit];
                 int bytesReceived = socket.Receive(receiveBuffer);
-                var response = SnepMessage.Parse(receiveBuffer, bytesReceived);
+                var response = SnepMessage.Parse(
+                    receiveBuffer, 
+                    bytesReceived,
+                    this.ndefParser);
 
                 // Request and response 'Continue' are different codes.
                 // Handle them seperately
@@ -178,7 +181,10 @@
             if (header.ContentLength + Constants.SnepHeaderLength >= bytesReceived)
             {
                 // Full message obtained.
-                return SnepMessage.Parse(receiveBuffer, bytesReceived);
+                return SnepMessage.Parse(
+                    receiveBuffer, 
+                    bytesReceived,
+                    this.ndefParser);
             }
 
             if (header.ContentLength > this.maxReceiveContentSize)
@@ -214,42 +220,45 @@
                 socket.Send(sendBuffer);
             }
 
-            INdefMessage content;
+            SnepMessage result;
             if (header.ContentLength > this.ndefParser.MaxBufferSize)
             {
                 // This message exceeds the buffer size, so drag the message in
                 // as it is read by the client application.
-                var contentStream = new SnepMessageStream(
+                var content = new SnepMessageStream(
                     header, 
                     receiveBuffer, 
                     socket);
-                this.messageStreams.Add(contentStream);
-                content = this.ndefParser.ParseMessage(contentStream);
+                this.messageStreams.Add(content);
+                result = SnepMessage.FromStream(
+                    header,
+                    content,
+                    this.ndefParser);
             }
             else
             {
                 // If the message is not large, handle it in memory.
-                var contentStream = new MemoryStream();
-                contentStream.Write(
+                var message = new MemoryStream();
+                message.Write(
                     receiveBuffer,
-                    Constants.SnepHeaderLength,
-                    receiveBuffer.Length - Constants.SnepHeaderLength);
+                    0,
+                    receiveBuffer.Length);
 
                 while (bytesReceived < 
                     header.ContentLength + Constants.SnepHeaderLength)
                 {
                     int currentBytes = socket.Receive(receiveBuffer);
                     bytesReceived += currentBytes;
-                    contentStream.Write(receiveBuffer, 0, currentBytes);
+                    message.Write(receiveBuffer, 0, currentBytes);
                 }
 
-                content = this.ndefParser.ParseMessage(
-                    contentStream.ToArray(),
-                    0,
-                    bytesReceived - Constants.SnepHeaderLength);
+                result = SnepMessage.Parse(
+                    message.ToArray(),
+                    bytesReceived,
+                    this.ndefParser);
             }
 
-            return SnepMessage.FromNdef(header, content);
+            return result;
         }
 
         /// <summary>

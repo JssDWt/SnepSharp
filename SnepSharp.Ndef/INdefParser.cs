@@ -20,16 +20,21 @@ namespace SnepSharp.Ndef
         /// Parses an <see cref="INdefMessage"/> from the specified 
         /// <see cref="Stream"/>. 
         /// </summary>
-        /// <remarks>The <see cref="Stream"/> will be readonly.</remarks>
+        /// <remarks>The <see cref="Stream"/> will be readonly, and may be 
+        /// empty. If the <see cref="Stream"/> is empty, <c>null</c> should be 
+        /// returned.</remarks>
         /// <returns>The <see cref="Stream"/> containing the message.</returns>
-        /// <param name="stream">Message stream.</param>
+        /// <param name="stream">Message stream, or null is the stream is empty.
+        /// </param>
         INdefMessage ParseMessage(Stream stream);
 
         /// <summary>
         /// Creates a <see cref="INdefMessage"/> from the specified 
         /// <see cref="Stream"/>.
         /// </summary>
-        /// <returns>The <see cref="byte[]"/> containing the message.</returns>
+        /// <remarks>If the <see cref="byte[]"/> is empty in the specified 
+        /// interval, <c>null</c> should be returned.</remarks>
+        /// <returns>The message, or null if the interval is empty.</returns>
         /// <param name="bytes">Message bytes.</param>
         INdefMessage ParseMessage(byte[] bytes, int offset, int count);
     }

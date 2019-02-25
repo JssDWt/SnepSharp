@@ -5,7 +5,7 @@
     /// <summary>
     /// Snep response message.
     /// </summary>
-    internal class SnepResponse : SnepMessage
+    internal abstract class SnepResponse : SnepMessage
     {
         /// <summary>
         /// Gets the response status code.
@@ -18,7 +18,7 @@
         /// </summary>
         /// <param name="response">The snep response code.</param>
         /// <param name="content">The response content.</param>
-        public SnepResponse(SnepResponseCode response, INdefMessage content)
+        protected SnepResponse(SnepResponseCode response, INdefMessage content)
             : this(Constants.DefaultSnepVersion, response, content)
         {
         }
@@ -29,7 +29,7 @@
         /// <param name="version">The snep protocol version.</param>
         /// <param name="response">The snep response code.</param>
         /// <param name="content">The response content.</param>
-        public SnepResponse(
+        protected SnepResponse(
             SnepVersion version, 
             SnepResponseCode response, 
             INdefMessage content)
