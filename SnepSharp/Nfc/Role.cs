@@ -1,5 +1,5 @@
 ﻿//
-//  Constants.cs
+//  Role.cs
 //
 //  Author:
 //       Jesse de Wit <witdejesse@hotmail.com>
@@ -18,34 +18,29 @@
 //
 //  You should have received a copy of the GNU General Public License
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-namespace SnepSharp.Llcp
+using System;
+namespace SnepSharp.Nfc
 {
-    using System.Text;
-
     /// <summary>
-    /// Constants for the Logical Link Control Protocol.
+    /// The role of the NFC device
     /// </summary>
-    internal static class Constants
+    [Flags]
+    public enum Role
     {
         /// <summary>
-        /// The maximum information units (octets) to send in a PDU.
+        /// The target waits until it is being discovered.
         /// </summary>
-        public const int MaximumInformationUnit = 128;
+        Target = 1,
 
         /// <summary>
-        /// The default timeout in milliseconds.
+        /// The initiator will try to discover the remote device.
         /// </summary>
-        public const int DefaultTimeout = 100;
+        Initiator = 2,
 
         /// <summary>
-        /// The default receive window size.
+        /// Alternate between the <see cref="Target"/> and 
+        /// <see cref="Initiator"/> roles.
         /// </summary>
-        public const int DefaultReceiveWindowSize = 1;
-
-        /// <summary>
-        /// The default encoding to encode strings with.
-        /// </summary>
-        public static readonly Encoding DefaultEncoding = Encoding.UTF8;
+        Both = 3,
     }
 }

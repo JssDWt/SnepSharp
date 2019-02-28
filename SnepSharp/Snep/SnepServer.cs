@@ -92,6 +92,11 @@ namespace SnepSharp.Snep
         private readonly INdefParser ndefParser;
 
         /// <summary>
+        /// The logical link control to manage connections with.
+        /// </summary>
+        private readonly LogicalLinkControl llc;
+
+        /// <summary>
         /// The maximum allowed request size for PUT requests.
         /// </summary>
         private int maxRequestSize = Constants.DefaultMaxResponseSize;
@@ -173,6 +178,7 @@ namespace SnepSharp.Snep
         public SnepServer(
             ICallBack callback, 
             INdefParser ndefParser,
+            LogicalLinkControl llc,
             int sapAddress = DefaultSapAddress,
             string serviceName = DefaultServiceName)
         {
@@ -182,6 +188,7 @@ namespace SnepSharp.Snep
                 ?? throw new ArgumentNullException(nameof(callback));
             this.ndefParser = ndefParser
                 ?? throw new ArgumentNullException(nameof(ndefParser));
+            this.llc = llc ?? throw new ArgumentNullException(nameof(llc));
         }
 
         /// <summary>
@@ -246,7 +253,7 @@ namespace SnepSharp.Snep
                     {
                         if (this.serverSocket == null)
                         {
-                            this.serverSocket = LogicalLinkControl.GetInstance()
+                            this.serverSocket = this.llc
                                 .CreateLlcpServerSocket();
                         }
                     }
@@ -264,8 +271,6 @@ namespace SnepSharp.Snep
                             this.clientTasks.Add(clientTask);
                         }
                     }
-
-
                 }
                 catch
                 {

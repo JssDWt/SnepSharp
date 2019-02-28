@@ -1,5 +1,5 @@
 ﻿//
-//  ParameterList.cs
+//  Constants.cs
 //
 //  Author:
 //       Jesse de Wit <witdejesse@hotmail.com>
@@ -19,33 +19,38 @@
 //  You should have received a copy of the GNU General Public License
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-namespace SnepSharp.Llcp.Parameters
+namespace SnepSharp.Llcp
 {
-    using System;
-    using System.Collections.Generic;
+    using System.Text;
 
     /// <summary>
-    /// Represents a list of parameters.
+    /// Constants for the Logical Link Control Protocol.
     /// </summary>
-    internal class ParameterList : List<Parameter>
+    internal static class Constants
     {
         /// <summary>
-        /// Creates a byte representation of the parameter list.
+        /// The maximum information units (octets) to send in a PDU.
         /// </summary>
-        /// <returns>The bytes.</returns>
-        public byte[] ToBytes()
-        {
-            throw new NotImplementedException();
-        }
+        public const int MaximumInformationUnit = 128;
 
         /// <summary>
-        /// Parses the bytes to create an instance of <see cref="ParameterList"/>.
+        /// The default timeout in milliseconds.
         /// </summary>
-        /// <returns>The bytes.</returns>
-        /// <param name="data">Parsed list.</param>
-        public static ParameterList FromBytes(byte[] data)
-        {
-            throw new NotImplementedException();
-        }
+        public const int DefaultTimeout = 100;
+
+        /// <summary>
+        /// The default receive window size.
+        /// </summary>
+        public const int DefaultReceiveWindowSize = 1;
+
+        /// <summary>
+        /// The default encoding to encode strings with.
+        /// </summary>
+        public static readonly Encoding DefaultEncoding = Encoding.UTF8;
+
+        /// <summary>
+        /// The name of the service discovery protocol (SDP) service.
+        /// </summary>
+        public static string ServiceDiscoveryProtocolName = "urn:nfc:sn:sdp";
     }
 }

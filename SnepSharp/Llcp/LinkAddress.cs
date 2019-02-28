@@ -23,6 +23,7 @@ namespace SnepSharp.Llcp
 {
     using System;
     using System.Collections;
+    using System.Collections.Generic;
     using System.Linq;
 
     /// <summary>
@@ -44,8 +45,9 @@ namespace SnepSharp.Llcp
         /// Addresses for well-known service access points defined in the NFC 
         /// Forum Assigned Values Registry [NFCREG].
         /// </summary>
-        public static readonly byte[] WellknownSaps 
-            = Enumerable.Range(0x02, 0x0F).Cast<byte>().ToArray();
+        public static readonly IReadOnlyCollection<LinkAddress> WellknownSaps 
+            = new HashSet<LinkAddress>(
+                Enumerable.Range(0x00, 0x0F).Cast<LinkAddress>());
 
         /// <summary>
         /// Addresses to be assigned by the local LLC to services registered by 
@@ -53,28 +55,24 @@ namespace SnepSharp.Llcp
         /// available by the local Service Discovery Protocol (SDP) instance for 
         /// discovery and use by a remote LLC.
         /// </summary>
-        public static readonly byte[] DiscoverableSaps 
-            = Enumerable.Range(0x10, 0x1F).Cast<byte>().ToArray();
+        public static readonly IReadOnlyCollection<LinkAddress> DiscoverableSaps
+            = new HashSet<LinkAddress>(
+                Enumerable.Range(0x10, 0x1F).Cast<LinkAddress>());
 
         /// <summary>
         /// Addresses to be assigned by the local LLC as the result of an upper 
         /// layer service request. SHALL NOT be available for discovery using 
         /// the Service Discovery Protocol (SDP).
         /// </summary>
-        public static readonly byte[] UpperLayerSaps 
-            = Enumerable.Range(0x20, 0x3F).Cast<byte>().ToArray();
+        public static readonly IReadOnlyCollection<LinkAddress> UpperLayerSaps 
+            = new HashSet<LinkAddress>(
+                Enumerable.Range(0x20, 0x3F).Cast<LinkAddress>());
 
         /// <summary>
         /// Gets the address.
         /// </summary>
         /// <value>The address.</value>
         public byte Address { get; }
-
-        /// <summary>
-        /// Gets the address bits.
-        /// </summary>
-        /// <value>The address bits.</value>
-        public BitArray BitAddress { get; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="LinkAddress"/> struct.
@@ -92,10 +90,6 @@ namespace SnepSharp.Llcp
             }
 
             this.Address = address;
-            this.BitAddress = new BitArray(new byte[] { address })
-            {
-                Length = 6
-            };
         }
 
         /// <summary>

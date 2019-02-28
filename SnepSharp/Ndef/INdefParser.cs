@@ -52,7 +52,7 @@ namespace SnepSharp.Ndef
         /// Creates a <see cref="INdefMessage"/> from the specified 
         /// <see cref="Stream"/>.
         /// </summary>
-        /// <remarks>If the <see cref="byte[]"/> is empty in the specified 
+        /// <remarks>If the <see cref="T:System.Byte[]"/> is empty in the specified 
         /// interval, <c>null</c> should be returned.</remarks>
         /// <returns>The message, or null if the interval is empty.</returns>
         /// <param name="bytes">Message bytes.</param>

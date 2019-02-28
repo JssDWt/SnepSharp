@@ -1,5 +1,5 @@
 ﻿//
-//  LinkServiceClass.cs
+//  Initiator.cs
 //
 //  Author:
 //       Jesse de Wit <witdejesse@hotmail.com>
@@ -18,14 +18,22 @@
 //
 //  You should have received a copy of the GNU General Public License
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+using System;
+using SnepSharp.Llcp.Pdus;
+using SnepSharp.Nfc;
 
-namespace SnepSharp.Llcp
+namespace SnepSharp.Mac
 {
-    internal enum LinkServiceClass
+    internal class Initiator : MacMapping
     {
-        Unknown = 0,
-        Connectionless = 1,
-        ConnectionOriented = 2,
-        Both = 3
+        public Initiator(CommunicationManager manager)
+            : base(manager, isInitiator: true)
+        {
+        }
+
+        public override ParameterExchangeUnit Activate(
+            ParameterExchangeUnit paxPdu) => throw new NotImplementedException();
+
+        public override void Deactivate() => throw new NotImplementedException();
     }
 }

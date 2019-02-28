@@ -181,7 +181,7 @@ namespace SnepSharp.Snep.Messages
 
         /// <summary>
         /// Creates a <see cref="SnepMessage"/> subclass from the specified 
-        /// <see cref="byte[]"/>.
+        /// <see cref="T:System.Byte[]"/>.
         /// </summary>
         /// <returns>The parsed message.</returns>
         /// <param name="message">Array containing the message, including 

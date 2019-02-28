@@ -31,6 +31,12 @@ namespace SnepSharp.Llcp
     internal struct DataLink : IEquatable<DataLink>
     {
         /// <summary>
+        /// An empty datalink, with dsap and ssap both 0.
+        /// </summary>
+        public static DataLink Empty 
+            = new DataLink((LinkAddress)0, (LinkAddress)0);
+
+        /// <summary>
         /// Gets the Destination Service Access Point (DSAP).
         /// </summary>
         /// <value>The Destination Service Access Point.</value>

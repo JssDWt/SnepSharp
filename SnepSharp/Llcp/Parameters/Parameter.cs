@@ -24,7 +24,7 @@ namespace SnepSharp.Llcp.Parameters
     /// <summary>
     /// Represents an LLCP parameter.
     /// </summary>
-    internal abstract class Parameter
+    public abstract class Parameter
     {
         /// <summary>
         /// Gets the parameter type.

@@ -26,12 +26,27 @@ namespace SnepSharp.Llcp
     /// <summary>
     /// Llcp version.
     /// </summary>
-    internal struct LlcpVersion : IEquatable<LlcpVersion>, IEquatable<byte>
+    public struct LlcpVersion : IEquatable<LlcpVersion>, IEquatable<byte>
     {
         /// <summary>
-        /// The deafult LLCP version; 1.0.
+        /// LLCP version 1.0.
         /// </summary>
         public static readonly LlcpVersion V10 = (LlcpVersion)0x10;
+
+        /// <summary>
+        /// LLCP version 1.1.
+        /// </summary>
+        public static readonly LlcpVersion V11 = (LlcpVersion)0x11;
+
+        /// <summary>
+        /// LLCP version 1.2.
+        /// </summary>
+        public static readonly LlcpVersion V12 = (LlcpVersion)0x12;
+
+        /// <summary>
+        /// LLCP version 1.3.
+        /// </summary>
+        public static readonly LlcpVersion V13 = (LlcpVersion)0x13;
 
         /// <summary>
         /// Gets the major version.

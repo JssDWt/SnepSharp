@@ -44,6 +44,11 @@ namespace SnepSharp.Snep
         private readonly INdefParser ndefParser;
 
         /// <summary>
+        /// The logical link control.
+        /// </summary>
+        private LogicalLinkControl llc;
+
+        /// <summary>
         /// The maximum allowed response size for GET requests.
         /// </summary>
         private int maxResponseSize = Constants.DefaultMaxResponseSize;
@@ -53,12 +58,9 @@ namespace SnepSharp.Snep
         /// <see cref="T:SnepSharp.Snep.SnepClient"/> class, that connects to
         /// the default snep server.
         /// </summary>
-        public SnepClient(INdefParser ndefParser)
+        public SnepClient(INdefParser ndefParser, LogicalLinkControl llc)
+            : this(SnepServer.DefaultServiceName, ndefParser, llc)
         {
-            this.ndefParser = ndefParser 
-                ?? throw new ArgumentNullException(nameof(ndefParser));
-            this.ServiceName = SnepServer.DefaultServiceName;
-            this.SapAddress = SnepServer.DefaultSapAddress;
         }
 
         /// <summary>
@@ -67,10 +69,20 @@ namespace SnepSharp.Snep
         /// the specified service name.
         /// </summary>
         /// <param name="serviceName">Service name.</param>
-        public SnepClient(string serviceName, INdefParser ndefParser)
+        public SnepClient(
+            string serviceName, 
+            INdefParser ndefParser,
+            LogicalLinkControl llc)
         {
+            this.llc = llc ?? throw new ArgumentNullException(nameof(llc));
+
             this.ServiceName = serviceName
                 ?? throw new ArgumentNullException(nameof(serviceName));
+
+            if (serviceName == SnepServer.DefaultServiceName)
+            {
+                this.SapAddress = SnepServer.DefaultSapAddress;
+            }
 
             this.ndefParser = ndefParser
                 ?? throw new ArgumentNullException(nameof(ndefParser));
@@ -114,31 +126,6 @@ namespace SnepSharp.Snep
 
                 this.maxResponseSize = value;
             }
-        }
-
-        /// <summary>
-        /// Connect the client to the snep server.
-        /// </summary>
-        public void Connect()
-        {
-            if (this.IsConnected) return;
-
-            var socket = LogicalLinkControl.GetInstance().CreateLlcpSocket();
-            if (this.SapAddress == -1)
-            {
-                socket.ConnectToService(this.ServiceName);
-            }
-            else
-            {
-                socket.ConnectToSap(this.SapAddress);
-            }
-
-            this.messenger = new SnepMessenger(
-                true, 
-                socket, 
-                this.ndefParser, 
-                this.MaxResponseSize);
-            this.IsConnected = true;
         }
 
         /// <summary>
@@ -231,7 +218,30 @@ namespace SnepSharp.Snep
             return result;
         }
 
+        /// <summary>
+        /// Connect the client to the snep server.
+        /// </summary>
+        private void Connect()
+        {
+            if (this.IsConnected) return;
 
+            var socket = this.llc.CreateLlcpSocket();
+            if (this.SapAddress == -1)
+            {
+                socket.ConnectToService(this.ServiceName);
+            }
+            else
+            {
+                socket.Bind((LinkAddress)this.SapAddress);
+            }
+
+            this.messenger = new SnepMessenger(
+                true,
+                socket,
+                this.ndefParser,
+                this.MaxResponseSize);
+            this.IsConnected = true;
+        }
 
         /// <summary>
         /// Closes the connection to the snep server.
@@ -265,6 +275,7 @@ namespace SnepSharp.Snep
             if (disposing)
             {
                 this.Close();
+                this.llc = null;
             }
         }
     }

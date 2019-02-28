@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Folder Include="Snep\" />
+    <Folder Include="Llcp\" />
+    <Folder Include="Ndef\" />
+    <Folder Include="Common\" />
+    <Folder Include="Llcp\Parameters\" />
+    <Folder Include="Llcp\Pdus\" />
+    <Folder Include="Snep\Messages\" />
+    <Folder Include="Mac\" />
+    <Folder Include="Nfc\" />
+    <Folder Include="Mac\Pcsc\" />
+  </ItemGroup>
+</Project>

@@ -22,28 +22,54 @@
 namespace SnepSharp.Llcp
 {
     using System;
+    using System.Collections.Generic;
+    using SnepSharp.Llcp.Pdus;
 
     public class LlcpSocket : IDisposable
     {
+        public SocketState State { get; }
         public int MaximumInformationUnit { get;  }
-        public int RemoteMaximumInformationUnit { get; }
-        public int RemoteReceiveWindowSize { get; }
-        public int LocalSap { get; }
-        public int LocalMaximumInformationUnit { get; }
-        public int LocalReceiveWindowSize { get; }
+        public LinkAddress? Address { get; }
+        public LinkAddress? Peer { get; }
 
-        public void ConnectToSap(int sap)
+        private Queue<ProtocolDataUnit> receiveQueue
+            = new Queue<ProtocolDataUnit>();
+
+        public void Bind(LinkAddress address)
         {
             throw new NotImplementedException();
         }
 
-        public void ConnectToService(string serviceName)
+        public void Unbind()
         {
             throw new NotImplementedException();
         }
 
         public void Close()
         {
+            throw new NotImplementedException();
+        }
+
+
+        public void ConnectToService(string serviceName)
+        {
+            throw new NotImplementedException();
+        }
+
+        internal void Enqueue(ProtocolDataUnit receivePdu)
+        {
+            this.receiveQueue.Enqueue(receivePdu);
+        }
+
+        internal ProtocolDataUnit Dequeue(int maximumInformationUnit)
+        {
+            // should return null is not found.
+            throw new NotImplementedException();
+        }
+
+        internal ProtocolDataUnit SendAcknowledgement()
+        {
+            // could return null.
             throw new NotImplementedException();
         }
 
