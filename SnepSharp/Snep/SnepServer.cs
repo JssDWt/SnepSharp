@@ -119,7 +119,7 @@ namespace SnepSharp.Snep
         /// <summary>
         /// The server socket.
         /// </summary>
-        private LlcpServerSocket serverSocket;
+        private ServerSocket serverSocket;
 
         /// <summary>
         /// Tasks for active client connections.
@@ -254,7 +254,7 @@ namespace SnepSharp.Snep
                         if (this.serverSocket == null)
                         {
                             this.serverSocket = this.llc
-                                .CreateLlcpServerSocket();
+                                .CreateServerSocket();
                         }
                     }
 
@@ -292,7 +292,7 @@ namespace SnepSharp.Snep
         }
 
         private void RunClientConnection(
-            LlcpSocket socket, 
+            Socket socket, 
             CancellationToken token)
         {
             var messenger = new SnepMessenger(

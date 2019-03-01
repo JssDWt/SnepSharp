@@ -44,7 +44,7 @@ namespace SnepSharp.Snep
         /// <summary>
         /// The Llcp socket to send messages over.
         /// </summary>
-        private LlcpSocket socket;
+        private Socket socket;
 
         /// <summary>
         /// Handles to returned <see cref="SnepMessageStream"/>. They will be 
@@ -72,7 +72,7 @@ namespace SnepSharp.Snep
         /// server.</param>
         public SnepMessenger(
             bool isClient, 
-            LlcpSocket socket, 
+            Socket socket, 
             INdefParser ndefParser, 
             int maxReceiveContentSize)
         {
@@ -181,7 +181,7 @@ namespace SnepSharp.Snep
                     using (var s = rejection.AsStream())
                     {
                         s.Read(sendBuffer, 0, Constants.SnepHeaderLength);
-                        socket.Send(sendBuffer);
+                        socket.Send(sendBuffer, sendBuffer.Length);
                     }
                 }
                 catch
@@ -221,7 +221,7 @@ namespace SnepSharp.Snep
                     using (var s = rejection.AsStream())
                     {
                         s.Read(sendBuffer, 0, Constants.SnepHeaderLength);
-                        socket.Send(sendBuffer);
+                        socket.Send(sendBuffer, sendBuffer.Length);
                     }
                 }
                 catch
@@ -238,7 +238,7 @@ namespace SnepSharp.Snep
             {
                 var sendBuffer = new byte[Constants.SnepHeaderLength];
                 s.Read(sendBuffer, 0, Constants.SnepHeaderLength);
-                socket.Send(sendBuffer);
+                socket.Send(sendBuffer, sendBuffer.Length);
             }
 
             SnepMessage result;
@@ -334,7 +334,7 @@ namespace SnepSharp.Snep
             /// <summary>
             /// The socket to drag in more data.
             /// </summary>
-            private LlcpSocket socket;
+            private Socket socket;
 
             /// <summary>
             /// The internal buffer offset.
@@ -366,7 +366,7 @@ namespace SnepSharp.Snep
             /// </summary>
             /// <param name="initialFragment">Initial fragment.</param>
             /// <param name="socket">Llcp socket.</param>
-            public SnepMessageStream(SnepHeader header, byte[] initialFragment, LlcpSocket socket)
+            public SnepMessageStream(SnepHeader header, byte[] initialFragment, Socket socket)
             {
                 this.header = header;
                 this.socket = socket;

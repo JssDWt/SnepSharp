@@ -18,21 +18,39 @@
 //
 //  You should have received a copy of the GNU General Public License
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using SnepSharp.Llcp.Pdus;
 
 namespace SnepSharp.Llcp
 {
+    using System;
+    using System.Collections.Generic;
+    using System.Linq;
+    using SnepSharp.Llcp.Pdus;
+
+    /// <summary>
+    /// Used for counting sent and received <see cref="ProtocolDataUnit"/>
+    /// of each <see cref="ProtocolDataUnitType"/>.
+    /// </summary>
     public class PduCounter
     {
+        /// <summary>
+        /// Gets the sent <see cref="ProtocolDataUnit"/> count of each type.
+        /// </summary>
+        /// <value>The sent pdus.</value>
         public Dictionary<ProtocolDataUnitType, int> Sent { get; }
             = Empty();
 
+        /// <summary>
+        /// Gets the received <see cref="ProtocolDataUnit"/> count of each type.
+        /// </summary>
+        /// <value>The received.</value>
         public Dictionary<ProtocolDataUnitType, int> Received { get; }
             = Empty();
 
+        /// <summary>
+        /// Creates an empty initialized dictionary with a key for each
+        /// <see cref="ProtocolDataUnitType"/>.
+        /// </summary>
+        /// <returns>The created dictionary.</returns>
         private static Dictionary<ProtocolDataUnitType, int> Empty()
         {
             var values = Enum.GetValues(typeof(ProtocolDataUnitType))

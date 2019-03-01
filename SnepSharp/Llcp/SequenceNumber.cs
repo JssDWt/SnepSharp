@@ -26,7 +26,7 @@ namespace SnepSharp.Llcp
     /// <summary>
     /// Represents a Protocol Data Unit sequence number in the header.
     /// </summary>
-    internal struct SequenceNumber
+    public struct SequenceNumber
     {
         /// <summary>
         /// Gets the sequence number, as used in the PDU header.

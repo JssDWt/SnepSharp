@@ -28,7 +28,7 @@ namespace SnepSharp.Llcp
 
     internal class ServiceAccessPoint : IDisposable
     {
-        private readonly List<LlcpSocket> sockets = new List<LlcpSocket>();
+        private readonly List<Socket> sockets = new List<Socket>();
         private readonly Queue<ProtocolDataUnit> sendQueue 
             = new Queue<ProtocolDataUnit>();
 
@@ -43,13 +43,20 @@ namespace SnepSharp.Llcp
 
         public LinkAddress Address { get; }
 
-        public void AddSocket(LlcpSocket socket)
+        public void AddSocket(Socket socket)
         {
+            if (socket.Address.HasValue)
+            {
+                throw new ArgumentException(
+                    "Socket is already bound.",
+                    nameof(socket));
+            }
+
             socket.Bind(this.Address);
             this.sockets.Add(socket);
         }
 
-        public void RemoveSocket(LlcpSocket socket)
+        public void RemoveSocket(Socket socket)
         {
             if (socket.Address != this.Address)
             {
@@ -123,6 +130,11 @@ namespace SnepSharp.Llcp
             }
         }
 
+        /// <summary>
+        /// Dequeue the first send pdu a socket has available.
+        /// </summary>
+        /// <returns>The dequeued pdu.</returns>
+        /// <param name="maximumInformationUnit">Maximum information unit.</param>
         public ProtocolDataUnit Dequeue(int maximumInformationUnit)
         {
             foreach (var socket in this.sockets)
@@ -142,6 +154,11 @@ namespace SnepSharp.Llcp
             return null;
         }
 
+        /// <summary>
+        /// Sends an acknowledgement, by browsing sockets that should send an
+        /// acknowledgement.
+        /// </summary>
+        /// <returns>The acknowledgement.</returns>
         public ProtocolDataUnit SendAcknowledgement()
         {
             foreach(var socket in this.sockets)
@@ -156,6 +173,9 @@ namespace SnepSharp.Llcp
             return null;
         }
 
+        /// <summary>
+        /// Close this instance and all sockets bound to this instance.
+        /// </summary>
         public void Close()
         {
             foreach(var socket in this.sockets)
@@ -167,6 +187,17 @@ namespace SnepSharp.Llcp
             this.sockets.Clear();
         }
 
+        /// <summary>
+        /// Releases all resource used by the <see cref="ServiceAccessPoint"/> 
+        /// object.
+        /// </summary>
+        /// <remarks>Call <see cref="Dispose()"/> when you are finished using 
+        /// the <see cref="ServiceAccessPoint"/>. The <see cref="Dispose()"/> 
+        /// method leaves the <see cref="ServiceAccessPoint"/> in an unusable 
+        /// state. After calling <see cref="Dispose()"/>, you must release all 
+        /// references to the <see cref="ServiceAccessPoint"/> so the garbage
+        /// collector can reclaim the memory that the 
+        /// <see cref="ServiceAccessPoint"/> was occupying.</remarks>
         public void Dispose()
         {
             this.Close();

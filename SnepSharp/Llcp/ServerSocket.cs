@@ -1,5 +1,5 @@
 ﻿//
-//  LlcpServerSocket.cs
+//  ServerSocket.cs
 //
 //  Author:
 //       Jesse de Wit <witdejesse@hotmail.com>
@@ -24,16 +24,36 @@ namespace SnepSharp.Llcp
     using System;
     using System.Threading;
 
-    public class LlcpServerSocket : IDisposable
+    public class ServerSocket
     {
-        public LlcpSocket Accept()
+        private LogicalLinkControl llc;
+
+        internal ServerSocket(LogicalLinkControl llc)
         {
-            throw new NotImplementedException();
         }
 
-        public LlcpSocket Accept(CancellationToken token)
+        public Socket Accept() => this.Accept(new CancellationToken(false));
+
+        public Socket Accept(CancellationToken token)
         {
-            throw new NotImplementedException();
+            while (!token.IsCancellationRequested)
+            {
+                // TODO: actual socket creation logic.
+                Socket clientSocket = null;
+                throw new NotImplementedException();
+                if (clientSocket == null) continue;
+
+                this.llc.AddToSap(clientSocket);
+
+                if (clientSocket.SendMiu > this.llc.SendMiu)
+                {
+                    clientSocket.SendMiu = this.llc.SendMiu;
+                }
+
+                return clientSocket;
+            }
+
+            return null;
         }
 
         public void Close()

@@ -24,6 +24,7 @@ namespace SnepSharp.Llcp
     using System;
     using System.Collections.Generic;
     using System.Linq;
+    using System.Text.RegularExpressions;
     using System.Threading;
     using SnepSharp.Llcp.Parameters;
     using SnepSharp.Llcp.Pdus;
@@ -34,6 +35,15 @@ namespace SnepSharp.Llcp
     /// </summary>
     public class LogicalLinkControl
     {
+        private static readonly Regex serviceNameFormat = new Regex(
+            @"^urn:nfc:[x]?sn:[a-zA-Z][a-zA-Z0-9-_:\.]*$", 
+            RegexOptions.Compiled);
+
+        private static readonly Dictionary<string, byte> wellKnownServiceMap =
+            new Dictionary<string, byte>{
+                { "urn:nfc:sn:sdp", 1 },
+                { "urn:nfc:sn:snep", 4 },
+            };
         private object padlock = new object();
         internal ServiceAccessPoint[] ServiceAccessPoints { get; }
         private Dictionary<string, byte> serviceNames 
@@ -74,15 +84,9 @@ namespace SnepSharp.Llcp
             this.ServiceAccessPoints[1] = this.serviceDiscoveryPoint;
         }
 
-        public LlcpSocket CreateLlcpSocket()
-        {
-            throw new NotImplementedException();
-        }
+        public Socket CreateSocket() => new Socket(this);
 
-        public LlcpServerSocket CreateLlcpServerSocket()
-        {
-            throw new NotImplementedException();
-        }
+        public ServerSocket CreateServerSocket() => new ServerSocket(this);
 
         /// <summary>
         /// Activates the LLCP connection.
@@ -131,6 +135,131 @@ namespace SnepSharp.Llcp
             }
 
             this.State = SocketState.Shutdown;
+        }
+
+        internal void Bind(Socket socket, string serviceName)
+        {
+            if (socket == null) throw new ArgumentNullException(nameof(socket));
+            if (serviceName == null)
+            {
+                throw new ArgumentNullException(nameof(serviceName));
+            }
+
+            if (!serviceNameFormat.IsMatch(serviceName))
+            {
+                throw new ArgumentException(
+                    "Invalid service name.", 
+                    nameof(serviceName));
+            }
+
+            lock (this.padlock)
+            {
+                if (this.serviceNames.Keys.Contains(serviceName))
+                {
+                    throw new InvalidOperationException("Service name in use.");
+                }
+
+                LinkAddress address;
+                if (wellKnownServiceMap.ContainsKey(serviceName))
+                {
+                    address = (LinkAddress)wellKnownServiceMap[serviceName];
+                }
+                else
+                {
+                    address = this.GetAvailableAddress();
+                }
+
+                this.ServiceAccessPoints[address] 
+                    = new ServiceAccessPoint(address, this);
+                this.ServiceAccessPoints[address].AddSocket(socket);
+                this.serviceNames.Add(serviceName, address);
+            }
+        }
+
+        internal void Bind(Socket socket, LinkAddress address)
+        {
+            if (socket == null) throw new ArgumentNullException(nameof(socket));
+            if (!LinkAddress.UpperLayerSaps.Contains(address))
+            {
+                throw new InvalidOperationException(
+                    "Must bind to upper layer SAP addresses only.");
+            }
+
+            lock (this.padlock)
+            {
+                if (this.ServiceAccessPoints[address] != null)
+                {
+                    throw new InvalidOperationException("Address in use.");
+                }
+
+                this.ServiceAccessPoints[address] 
+                    = new ServiceAccessPoint(address, this);
+
+                this.ServiceAccessPoints[address].AddSocket(socket);
+            }
+        }
+
+        internal void Bind(Socket socket)
+        {
+            if (socket == null) throw new ArgumentNullException(nameof(socket));
+
+            lock (this.padlock)
+            {
+                LinkAddress address = this.GetAvailableAddress();
+
+                this.ServiceAccessPoints[address] 
+                    = new ServiceAccessPoint(address, this);
+                this.ServiceAccessPoints[address].AddSocket(socket);
+            }
+        }
+
+        internal void AddToSap(Socket socket)
+        {
+            if (socket == null) throw new ArgumentNullException(nameof(socket));
+            lock (this.padlock)
+            {
+                var sap = this.ServiceAccessPoints[socket.Address.Value];
+                if (sap == null)
+                {
+                    throw new InvalidOperationException(
+                        "Cannot add socket to unbound service access point.");
+                }
+
+                sap.AddSocket(socket);
+            }
+        }
+
+        internal bool Send(Socket socket, ProtocolDataUnit message)
+        {
+            throw new NotImplementedException();
+        }
+
+        internal bool SendTo(
+            Socket socket, 
+            ProtocolDataUnit message, 
+            LinkAddress destination)
+        {
+            throw new NotImplementedException();
+        }
+
+        internal ProtocolDataUnit Receive(Socket socket)
+        {
+            throw new NotImplementedException();
+        }
+
+        private LinkAddress GetAvailableAddress()
+        {
+            LinkAddress? address = LinkAddress.UpperLayerSaps
+                    .FirstOrDefault(a => this.ServiceAccessPoints[a] == null);
+
+            if (!address.HasValue)
+            {
+                throw new InvalidOperationException(
+                    "All upper layer service access point addresses are " +
+                    "taken.");
+            }
+
+            return address.Value;
         }
 
         /// <summary>

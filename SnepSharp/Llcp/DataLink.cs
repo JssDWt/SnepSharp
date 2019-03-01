@@ -28,7 +28,7 @@ namespace SnepSharp.Llcp
     /// in connectionless transport, or a data link connection in 
     /// connection-oriented transport.
     /// </summary>
-    internal struct DataLink : IEquatable<DataLink>
+    public struct DataLink : IEquatable<DataLink>
     {
         /// <summary>
         /// An empty datalink, with dsap and ssap both 0.

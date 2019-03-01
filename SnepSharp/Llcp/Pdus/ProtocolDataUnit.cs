@@ -25,7 +25,7 @@ namespace SnepSharp.Llcp.Pdus
     /// Protocol data unit (PDU) that is exchanged between 
     /// <see cref="DataLink"/> (LLC).
     /// </summary>
-    internal abstract class ProtocolDataUnit
+    public abstract class ProtocolDataUnit
     {
         /// <summary>
         /// Gets the data link connection this PDU is transmitted over.

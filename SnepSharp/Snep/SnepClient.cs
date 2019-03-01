@@ -225,10 +225,10 @@ namespace SnepSharp.Snep
         {
             if (this.IsConnected) return;
 
-            var socket = this.llc.CreateLlcpSocket();
+            var socket = this.llc.CreateSocket();
             if (this.SapAddress == -1)
             {
-                socket.ConnectToService(this.ServiceName);
+                socket.Connect(this.ServiceName);
             }
             else
             {

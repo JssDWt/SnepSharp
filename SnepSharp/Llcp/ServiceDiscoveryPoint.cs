@@ -21,19 +21,30 @@
 
 namespace SnepSharp.Llcp
 {
-    using System;
     using System.Collections.Generic;
     using SnepSharp.Llcp.Pdus;
 
+    /// <summary>
+    /// A service dicovery point, for dicovering the services available on the
+    /// <see cref="LogicalLinkControl"/>.
+    /// </summary>
     internal class ServiceDiscoveryPoint : ServiceAccessPoint
     {
+        /// <summary>
+        /// Gets the disconnected mode pdus sent to the remote party.
+        /// </summary>
+        /// <value>The disconnected mode pdus.</value>
         public ICollection<DisconnectedModeUnit> DisconnectedModePdus { get; }
+
+        /// <summary>
+        /// Initializes a new instance of the 
+        /// <see cref="ServiceDiscoveryPoint"/> class.
+        /// </summary>
+        /// <param name="llc">Logical link control.</param>
         public ServiceDiscoveryPoint(LogicalLinkControl llc)
             : base((LinkAddress)1, llc)
         {
             this.DisconnectedModePdus = new List<DisconnectedModeUnit>();
         }
-
-
     }
 }
