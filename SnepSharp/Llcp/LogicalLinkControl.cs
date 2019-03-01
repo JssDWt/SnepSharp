@@ -40,6 +40,7 @@ namespace SnepSharp.Llcp
             = new Dictionary<string, byte>();
         private MacMapping mac;
         private PduCounter counter = new PduCounter();
+        private ServiceDiscoveryPoint serviceDiscoveryPoint;
 
         public LinkServiceClass LinkServiceClass { get; } 
             = LinkServiceClass.ConnectionOriented;
@@ -69,7 +70,8 @@ namespace SnepSharp.Llcp
             this.ServiceAccessPoints[0] = new ServiceAccessPoint(
                 (LinkAddress)0, 
                 this);
-            this.ServiceAccessPoints[1] = new ServiceDiscoveryPoint(this);
+            this.serviceDiscoveryPoint = new ServiceDiscoveryPoint(this);
+            this.ServiceAccessPoints[1] = this.serviceDiscoveryPoint;
         }
 
         public LlcpSocket CreateLlcpSocket()
@@ -131,13 +133,24 @@ namespace SnepSharp.Llcp
             this.State = SocketState.Shutdown;
         }
 
+        /// <summary>
+        /// Disconnects from the client, then terminates.
+        /// </summary>
         private void Disconnect()
         {
             this.State = SocketState.Disconnecting;
             this.Terminate();
         }
 
-        internal ProtocolDataUnit Exchange(
+        /// <summary>
+        /// Exchange the specified sendPdu with the mac layer, respecting the
+        /// specified timeout.
+        /// </summary>
+        /// <returns>The response pdu, or null if no response is available.
+        /// </returns>
+        /// <param name="sendPdu">pdu to send.</param>
+        /// <param name="timeout">Timeout.</param>
+        private ProtocolDataUnit Exchange(
             ProtocolDataUnit sendPdu, 
             TimeSpan timeout)
         {
@@ -147,7 +160,7 @@ namespace SnepSharp.Llcp
             }
 
             // TODO: catch?
-            var receivePdu = this.mac.Exchange(sendPdu);
+            var receivePdu = this.mac.Exchange(sendPdu, timeout);
 
             if (receivePdu != null)
             {
@@ -232,6 +245,10 @@ namespace SnepSharp.Llcp
             }
         }
 
+        /// <summary>
+        /// Runs the <see cref="LogicalLinkControl"/> as target.
+        /// </summary>
+        /// <param name="token">Cancellation token.</param>
         private void RunAsTarget(CancellationToken token)
         {
             var receiveTimeout = this.ReceiveLinkTimeout
@@ -280,10 +297,13 @@ namespace SnepSharp.Llcp
                 receivePdu = this.Exchange(sendPdu, receiveTimeout);
             }
 
-            this.State = SocketState.Disconnecting;
-            this.Terminate();
+            this.Disconnect();
         }
 
+        /// <summary>
+        /// Runs the <see cref="LogicalLinkControl"/> as initiator.
+        /// </summary>
+        /// <param name="token">Cancelation token.</param>
         private void RunAsInitiator(CancellationToken token)
         {
             var receiveTimeout = this.ReceiveLinkTimeout 
@@ -330,10 +350,15 @@ namespace SnepSharp.Llcp
                 }
             }
 
-            this.State = SocketState.Disconnecting;
-            this.Terminate();
+            this.Disconnect();
         }
 
+        /// <summary>
+        /// Collect a protocol data unit available for sending from the service
+        /// access points.
+        /// </summary>
+        /// <returns>The collected pdu, or null if none is available.</returns>
+        /// <param name="delay">Delay defore collection.</param>
         private ProtocolDataUnit Collect(TimeSpan? delay)
         {
             if (delay.HasValue)
@@ -362,9 +387,95 @@ namespace SnepSharp.Llcp
             }
         }
 
+        /// <summary>
+        /// Dispatch the specified receivePdu to the right service access point.
+        /// </summary>
+        /// <param name="receivePdu">Receive pdu to dispatch.</param>
         private void Dispatch(ProtocolDataUnit receivePdu)
         {
-            throw new NotImplementedException();
+            if (receivePdu.Type == ProtocolDataUnitType.Symmetry)
+            {
+                return;
+            }
+
+            if (receivePdu.Type == ProtocolDataUnitType.AggregatedFrame)
+            {
+                if (receivePdu.DataLinkConnection == DataLink.Empty)
+                {
+                    var agg = (AggregatedFrameUnit)receivePdu;
+                    foreach (var pdu in agg.Aggregate)
+                    {
+                        this.Dispatch(pdu);
+                    }
+                }
+
+                return;
+            }
+
+            lock (this.padlock)
+            {
+                if (receivePdu.Type == ProtocolDataUnitType.Connect
+                && receivePdu.DataLinkConnection.Destination 
+                    == LinkAddress.ServiceDiscoveryProtocolSap)
+                {
+                    var connect = (ConnectUnit)receivePdu;
+                    bool disconnect = false;
+                    DisconnectReason reason 
+                        = DisconnectReason.PermanentlyUnavailable;
+                    byte address = 0;
+                    if (connect.ServiceName == null)
+                    {
+                        disconnect = true;
+                        reason = DisconnectReason.PermanentInvalidAddress;
+                    }
+                    else if (this.serviceNames.TryGetValue(
+                        connect.ServiceName,
+                        out address))
+                    {
+                        // service name bound
+                        var s = this.ServiceAccessPoints[address];
+                        if (s == null)
+                        {
+                            // service name bound, but no service available.
+                            disconnect = true;
+                            reason = DisconnectReason.NoServiceBound;
+                        }
+                    }
+                    else
+                    {
+                        // serivce name not bound.
+                        disconnect = true;
+                        reason = DisconnectReason.NoServiceBound;
+                    }
+
+                    if (disconnect)
+                    {
+                        var disconnectPdu = new DisconnectedModeUnit(
+                            new DataLink(
+                                LinkAddress.ServiceDiscoveryProtocolSap,
+                                receivePdu.DataLinkConnection.Source),
+                            reason);
+                        this.serviceDiscoveryPoint.DisconnectedModePdus.Add(
+                            disconnectPdu);
+                        return;
+                    }
+
+                    // service found. Rewrite the connect unit to the bound service.
+                    receivePdu = new ConnectUnit(
+                        new DataLink(
+                            receivePdu.DataLinkConnection.Source,
+                            (LinkAddress)address),
+                        connect.MaximumInformationUnitExtension,
+                        connect.ReceiveWindowSize);
+                }
+
+                var sap = this.ServiceAccessPoints[
+                    receivePdu.DataLinkConnection.Destination];
+                if (sap != null)
+                {
+                    sap.Enqueue(receivePdu);
+                }
+            }
         }
     }
 }

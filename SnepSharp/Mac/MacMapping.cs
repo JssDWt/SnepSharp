@@ -109,7 +109,9 @@ namespace SnepSharp.Mac
 
         public abstract void Deactivate();
 
-        public ProtocolDataUnit Exchange(ProtocolDataUnit sendPdu)
+        public ProtocolDataUnit Exchange(
+            ProtocolDataUnit sendPdu, 
+            TimeSpan timeout)
         {
             throw new NotImplementedException();
         }

@@ -22,12 +22,16 @@
 namespace SnepSharp.Llcp
 {
     using System;
+    using System.Collections.Generic;
+    using SnepSharp.Llcp.Pdus;
 
     internal class ServiceDiscoveryPoint : ServiceAccessPoint
     {
+        public ICollection<DisconnectedModeUnit> DisconnectedModePdus { get; }
         public ServiceDiscoveryPoint(LogicalLinkControl llc)
             : base((LinkAddress)1, llc)
         {
+            this.DisconnectedModePdus = new List<DisconnectedModeUnit>();
         }
 
 

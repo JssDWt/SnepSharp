@@ -34,12 +34,14 @@ namespace SnepSharp.Llcp
         /// <summary>
         /// Address that designates the LLC link management component.
         /// </summary>
-        public const byte LlcLinkManagementComponentSap = 0x00;
+        public static readonly LinkAddress LlcLinkManagementComponentSap 
+            = (LinkAddress)0x00;
 
         /// <summary>
         /// Designates the wellknown address for the Service Delivery Protocol.
         /// </summary>
-        public const byte ServiceDiscoveryProtocolSap = 0x01;
+        public static readonly LinkAddress ServiceDiscoveryProtocolSap 
+            = (LinkAddress)0x01;
 
         /// <summary>
         /// Addresses for well-known service access points defined in the NFC 

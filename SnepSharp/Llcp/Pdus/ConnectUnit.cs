@@ -30,28 +30,69 @@ namespace SnepSharp.Llcp.Pdus
     internal class ConnectUnit : ProtocolDataUnit
     {
         /// <summary>
+        /// Gets the maximum information unit extension. (MIUX)
+        /// </summary>
+        /// <value>The maximum information unit extension.</value>
+        public int MaximumInformationUnitExtension { get; }
+
+        /// <summary>
+        /// Gets the size of the receive window. (RW)
+        /// </summary>
+        /// <value>The size of the receive window.</value>
+        public int ReceiveWindowSize { get; }
+
+        /// <summary>
+        /// Gets the name of the service. (SN)
+        /// </summary>
+        /// <value>The name of the service.</value>
+        public string ServiceName { get; }
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="ConnectUnit"/> class.
         /// </summary>
         /// <param name="connection">Data link connection.</param>
-        /// <param name="parameters">Optional connection specific parameters.
-        /// </param>
-        public ConnectUnit(DataLink connection, ParameterList parameters)
+        /// <param name="miux">The maximum information unit extension.</param>
+        /// <param name="receiveWindowSize">Receive window size.</param>
+        /// <param name="serviceName">Service name.</param>
+        public ConnectUnit(
+            DataLink connection, 
+            int miux = 0,
+            int receiveWindowSize = 1,
+            string serviceName = null)
             : base(
                 connection, 
                 ProtocolDataUnitType.Connect, 
                 null, 
-                ToBytes(parameters))
+                ToBytes(miux, receiveWindowSize, serviceName))
         {
+            this.MaximumInformationUnitExtension = miux;
+            this.ReceiveWindowSize = receiveWindowSize;
+            this.ServiceName = serviceName;
         }
 
         /// <summary>
         /// Converts the parameters to bytes.
         /// </summary>
         /// <returns>The bytes, or null if the parameter list is null.</returns>
-        /// <param name="parameters">Parameters to convert.</param>
-        private static byte[] ToBytes(ParameterList parameters)
+        private static byte[] ToBytes(int miux, int rw, string sn)
         {
-            if (parameters == null) return null;
+            var parameters = new ParameterList();
+            if (miux != 0)
+            {
+                parameters.Add(new MiuxParameter(miux));
+            }
+
+            if (rw != 1)
+            {
+                parameters.Add(new ReceiveWindowSizeParameter(rw));
+            }
+
+            if (sn != null)
+            {
+                parameters.Add(new ServiceNameParameter(sn));
+            }
+
+            if (parameters.Count == 0) return null;
             return parameters.ToBytes();
         }
 

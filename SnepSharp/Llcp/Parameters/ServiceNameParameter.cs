@@ -33,6 +33,12 @@ namespace SnepSharp.Llcp.Parameters
     internal class ServiceNameParameter : Parameter
     {
         /// <summary>
+        /// Gets the service name.
+        /// </summary>
+        /// <value>The service name.</value>
+        public string ServiceName { get; }
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="ServiceNameParameter"/> 
         /// class.
         /// </summary>
@@ -40,6 +46,7 @@ namespace SnepSharp.Llcp.Parameters
         public ServiceNameParameter(string serviceName)
             : base(ParameterType.ServiceName, AsBytes(serviceName))
         {
+            this.ServiceName = serviceName;
         }
 
         /// <summary>

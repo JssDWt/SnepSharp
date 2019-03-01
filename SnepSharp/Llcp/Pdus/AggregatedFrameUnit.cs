@@ -33,6 +33,12 @@ namespace SnepSharp.Llcp.Pdus
     internal class AggregatedFrameUnit : ProtocolDataUnit
     {
         /// <summary>
+        /// Gets the aggregated sub pdus.
+        /// </summary>
+        /// <value>The aggregate.</value>
+        public IReadOnlyCollection<ProtocolDataUnit> Aggregate { get; }
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="AggregatedFrameUnit"/> 
         /// class.
         /// </summary>
@@ -47,7 +53,7 @@ namespace SnepSharp.Llcp.Pdus
                   null, 
                   ToBytes(aggregate))
         {
-
+            this.Aggregate = aggregate?.ToList() ?? new List<ProtocolDataUnit>();
         }
 
         /// <summary>
