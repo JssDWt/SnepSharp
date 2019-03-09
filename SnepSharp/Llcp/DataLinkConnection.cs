@@ -25,6 +25,8 @@ namespace SnepSharp.Llcp
     using System;
     using System.Collections.Concurrent;
     using System.Threading;
+    using System.Threading.Tasks;
+    using Nito.AsyncEx;
     using SnepSharp.Llcp.Exceptions;
     using SnepSharp.Llcp.Pdus;
 
@@ -32,18 +34,18 @@ namespace SnepSharp.Llcp
     {
         private class PendingSend
         {
-            public ManualResetEventSlim ManualResetEvent { get; set; }
+            public AsyncManualResetEvent ManualResetEvent { get; set; }
             public bool Success { get; set; }
             public string Message { get; set; }
             public Exception InnerException { get; set; }
         }
 
-        private readonly object sendLock = new object();
-        private readonly object receiveLock = new object();
-        private readonly ManualResetEventSlim receiveAvailable
-            = new ManualResetEventSlim(false);
+        private readonly AsyncLock sendLock = new AsyncLock();
+        private readonly AsyncLock receiveLock = new AsyncLock();
+        private readonly AsyncManualResetEvent receiveAvailable
+            = new AsyncManualResetEvent(false);
         private readonly SemaphoreSlim receiveSemaphore
-            = new SemaphoreSlim(1, 1);
+            = new SemaphoreSlim(0, 1);
 
         private readonly ConcurrentQueue<byte[]> sendQueue
             = new ConcurrentQueue<byte[]>();
@@ -188,8 +190,8 @@ namespace SnepSharp.Llcp
         /// <param name="address">The address to bind to.</param>
         public void Bind(LinkAddress address)
         {
-            lock (this.sendLock)
-            lock (this.receiveLock)
+            using (this.sendLock.Lock())
+            using (this.receiveLock.Lock())
             {
                 this.llc.Bind(this, address);
             }
@@ -201,8 +203,8 @@ namespace SnepSharp.Llcp
         /// <param name="serviceName">Service name.</param>
         public void Bind(string serviceName)
         {
-            lock (this.sendLock)
-            lock (this.receiveLock)
+            using (this.sendLock.Lock())
+            using (this.receiveLock.Lock())
             {
                 this.llc.Bind(this, serviceName);
             }
@@ -214,8 +216,8 @@ namespace SnepSharp.Llcp
         /// </summary>
         public void Bind()
         {
-            lock (this.sendLock)
-            lock (this.receiveLock)
+            using (this.sendLock.Lock())
+            using (this.receiveLock.Lock())
             {
                 this.llc.Bind(this);
             }
@@ -226,7 +228,7 @@ namespace SnepSharp.Llcp
             throw new NotImplementedException();
         }
 
-        public void Connect(LinkAddress destination)
+        public Task Connect(LinkAddress destination)
             => this.Connect(destination, new CancellationToken(false));
 
         /// <summary>
@@ -237,9 +239,9 @@ namespace SnepSharp.Llcp
         /// set to an available service access point.</remarks>
         /// <param name="destination">Destination service access point address.
         /// </param>
-        public void Connect(LinkAddress destination, CancellationToken token)
+        public Task Connect(LinkAddress destination, CancellationToken token)
         {
-            this.Connect(() =>
+            return this.Connect(() =>
             {
                 var link = new DataLink(this.Address.Value, destination);
                 return new ConnectUnit(
@@ -250,12 +252,12 @@ namespace SnepSharp.Llcp
             token);
         }
 
-        public void Connect(string serviceName)
+        public Task Connect(string serviceName)
             => this.Connect(serviceName, new CancellationToken(false));
 
-        private void Connect(string serviceName, CancellationToken token)
+        private Task Connect(string serviceName, CancellationToken token)
         {
-            this.Connect(() =>
+            return this.Connect(() =>
             {
                 var link = new DataLink(
                     this.Address.Value, 
@@ -269,13 +271,13 @@ namespace SnepSharp.Llcp
             token);
         }
 
-        private void Connect(
+        private async Task Connect(
             Func<ConnectUnit> createConnectPdu,
             CancellationToken token)
         {
             ConnectUnit connect = null;
-            lock (this.sendLock)
-            lock (this.receiveLock)
+            using (await this.sendLock.LockAsync(token))
+            using (await this.receiveLock.LockAsync(token))
             {
                 if (!this.IsBound)
                 {
@@ -302,42 +304,41 @@ namespace SnepSharp.Llcp
                 this.State = SocketState.Connecting;
             }
 
-            this.receiveSemaphore.Wait(token);
+            await this.receiveSemaphore.WaitAsync(token);
 
             try
             {
-                using (var handle = new ManualResetEventSlim(false))
+                var handle = new AsyncManualResetEvent(false);
+                var pendingSend = new PendingSend
                 {
-                    var pendingSend = new PendingSend
-                    {
-                        ManualResetEvent = handle
-                    };
+                    ManualResetEvent = handle
+                };
 
-                    lock (this.sendLock)
-                    {
-                        this.sendFastLane.Enqueue(connect);
-                        this.pendingSendQueue.Enqueue(pendingSend);
-                    }
-
-                    // Wait for just created the send handle to notify.
-                    // May throw operation cancelled, in which case the message is
-                    // still enqueued... Maybe fix that later.
-                    // TODO: Remove cancelled items from the send queue.
-                    handle.Wait(token);
-
-                    if (!pendingSend.Success)
-                    {
-                        // TODO: Throw more specific exception.
-                        throw new CommunicationException(
-                            pendingSend.Message,
-                            pendingSend.InnerException);
-                    }
+                using (await this.sendLock.LockAsync(token))
+                {
+                    this.sendFastLane.Enqueue(connect);
+                    this.pendingSendQueue.Enqueue(pendingSend);
                 }
 
-                this.receiveAvailable.Wait(token);
+                // Wait for just created the send handle to notify.
+                // May throw operation cancelled, in which case the message is
+                // still enqueued... Maybe fix that later.
+                // TODO: Remove cancelled items from the send queue.
+                await handle.WaitAsync(token);
 
-                lock (this.sendLock)
-                lock (this.receiveLock)
+                if (!pendingSend.Success)
+                {
+                    // TODO: Throw more specific exception.
+                    throw new CommunicationException(
+                        pendingSend.Message,
+                        pendingSend.InnerException);
+                }
+                
+
+                await this.receiveAvailable.WaitAsync(token);
+
+                using (await this.sendLock.LockAsync(token))
+                using (await this.receiveLock.LockAsync(token))
                 {
                     if (!this.receiveQueue.TryDequeue(
                         out ProtocolDataUnit response))
@@ -390,8 +391,8 @@ namespace SnepSharp.Llcp
             }
 
             receiveBuffer = Math.Min(receiveBuffer, 16);
-            lock (this.sendLock)
-            lock (this.receiveLock)
+            using (this.sendLock.Lock())
+            using (this.receiveLock.Lock())
             {
                 if (this.State != SocketState.Closed)
                 {
@@ -414,16 +415,16 @@ namespace SnepSharp.Llcp
             }
         }
 
-        public void Send(byte[] message, int count)
+        public Task Send(byte[] message, int count)
             => this.Send(message, count, new CancellationToken(false));
 
-        public void Send(byte[] message, int count, CancellationToken token)
+        public Task Send(byte[] message, int count, CancellationToken token)
             => this.Send(message, 0, count, token);
 
-        public void Send(byte[] message, int offset, int count)
+        public Task Send(byte[] message, int offset, int count)
             => this.Send(message, offset, count, new CancellationToken(false));
 
-        public void Send(
+        public async Task Send(
             byte[] message,
             int offset,
             int count,
@@ -472,42 +473,41 @@ namespace SnepSharp.Llcp
             }
 
             // initialize handle to wait for.
-            using (var handle = new ManualResetEventSlim(false))
+            var handle = new AsyncManualResetEvent(false);
+            
+            var pendingSend = new PendingSend
             {
-                var pendingSend = new PendingSend
-                {
-                    ManualResetEvent = handle
-                };
+                ManualResetEvent = handle
+            };
 
-                var buffer = new byte[count];
-                Array.Copy(message, offset, buffer, 0, count);
+            var buffer = new byte[count];
+            Array.Copy(message, offset, buffer, 0, count);
 
-                // Make sure the item and pendingSend are put at the same order.
-                lock (this.sendLock)
-                {
-                    this.sendQueue.Enqueue(buffer);
-                    this.pendingSendQueue.Enqueue(pendingSend);
-                }
+            // Make sure the item and pendingSend are put at the same order.
+            using (await this.sendLock.LockAsync())
+            {
+                this.sendQueue.Enqueue(buffer);
+                this.pendingSendQueue.Enqueue(pendingSend);
+            }
 
-                // Wait for just created the send handle to notify.
-                // May throw operation cancelled, in which case the message is
-                // still enqueued... Maybe fix that later.
-                // TODO: Remove cancelled items from the send queue.
-                handle.Wait(token);
+            // Wait for just created the send handle to notify.
+            // May throw operation cancelled, in which case the message is
+            // still enqueued... Maybe fix that later.
+            // TODO: Remove cancelled items from the send queue.
+            await handle.WaitAsync(token);
 
-                if (!pendingSend.Success)
-                {
-                    // TODO: Throw more specific exception.
-                    throw new CommunicationException(
-                        pendingSend.Message,
-                        pendingSend.InnerException);
-                }
+            if (!pendingSend.Success)
+            {
+                // TODO: Throw more specific exception.
+                throw new CommunicationException(
+                    pendingSend.Message,
+                    pendingSend.InnerException);
             }
         }
 
-        public byte[] Receive() => this.Receive(new CancellationToken(false));
+        public Task<byte[]> Receive() => this.Receive(new CancellationToken(false));
 
-        public byte[] Receive(CancellationToken token)
+        public async Task<byte[]> Receive(CancellationToken token)
         {
             // TODO: Make sure sap is always connected when bound.
             if (!this.IsBound)
@@ -516,12 +516,12 @@ namespace SnepSharp.Llcp
             }
 
             // This makes sure clients fall through one by one.
-            this.receiveSemaphore.Wait(token);
+            await this.receiveSemaphore.WaitAsync(token);
 
             try
             {
                 // This makes sure a message is available.
-                this.receiveAvailable.Wait(token);
+                await this.receiveAvailable.WaitAsync(token);
 
                 // TODO: Make sure this is an information unit.
                 if (!this.receiveQueue.TryDequeue(out ProtocolDataUnit result))
@@ -533,7 +533,7 @@ namespace SnepSharp.Llcp
                 }
 
                 // Make sure the count check and the reset happen in a single go.
-                lock (this.receiveLock)
+                using (await this.receiveLock.LockAsync(token))
                 {
                     if (this.receiveQueue.Count == 0)
                     {
@@ -563,8 +563,8 @@ namespace SnepSharp.Llcp
         /// <param name="pdu">Pdu.</param>
         public void EnqueueReceived(ProtocolDataUnit pdu)
         {
-            lock (this.sendLock)
-            lock (this.receiveLock)
+            using (this.sendLock.Lock())
+            using (this.receiveLock.Lock())
             {
                 if (!this.DetermineConnectionModeUnit(pdu))
                 {
@@ -712,8 +712,8 @@ namespace SnepSharp.Llcp
 
         private void ClearClientSendQueue()
         {
-            lock (this.sendLock)
-            lock(this.receiveLock)
+            using (this.sendLock.Lock())
+            using (this.receiveLock.Lock())
             {
                 while (this.sendQueue.TryDequeue(out byte[] result))
                 {
@@ -731,8 +731,8 @@ namespace SnepSharp.Llcp
 
         private void ClearSendQueues()
         {
-            lock (this.sendLock)
-            lock (this.receiveLock)
+            using (this.sendLock.Lock())
+            using (this.receiveLock.Lock())
             {
                 this.ClearClientSendQueue();
 
@@ -773,7 +773,7 @@ namespace SnepSharp.Llcp
 
         public ProtocolDataUnit DequeueForSend(int maxInformationUnit)
         {
-            lock (this.sendLock)
+            using (this.sendLock.Lock())
             {
                 if (this.sendFastLane.TryPeek(out ProtocolDataUnit pdu))
                 {
@@ -852,7 +852,7 @@ namespace SnepSharp.Llcp
             // This was a I, RR or RNR unit, so contains sequence numbers for
             // acknowledgement.
 
-            lock (this.sendLock)
+            using (this.sendLock.Lock())
             {
                 if (!isConnect && success)
                 {
@@ -861,7 +861,7 @@ namespace SnepSharp.Llcp
                     var newState = pdu.Sequence.Value.ReceiveSequence;
                     var diff = newState - oldState;
                     this.receiveAckState = newState;
-                    lock (this.receiveLock)
+                    using (this.receiveLock.Lock())
                     {
                         // a few less pending receive confirmations.
                         this.pendingReceiveConfirmations -= diff;
@@ -913,8 +913,8 @@ namespace SnepSharp.Llcp
         {
             if (disposing)
             {
-                lock (this.sendLock)
-                lock (this.receiveLock)
+                using (this.sendLock.Lock())
+                using (this.receiveLock.Lock())
                 {
                     this.State = SocketState.Closing;
                     

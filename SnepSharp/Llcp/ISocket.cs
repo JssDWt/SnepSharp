@@ -2,6 +2,7 @@
 {
     using System;
     using System.Threading;
+    using System.Threading.Tasks;
 
     public interface ISocket : IDisposable
     {
@@ -18,11 +19,11 @@
         LinkAddress? Peer { get; }
 
         void Close();
-        byte[] Receive();
-        byte[] Receive(CancellationToken token);
-        void Send(byte[] message, int count);
-        void Send(byte[] message, int count, CancellationToken token);
-        void Send(byte[] message, int offset, int count);
-        void Send(byte[] message, int offset, int count, CancellationToken token);
+        Task<byte[]> Receive();
+        Task<byte[]> Receive(CancellationToken token);
+        Task Send(byte[] message, int count);
+        Task Send(byte[] message, int count, CancellationToken token);
+        Task Send(byte[] message, int offset, int count);
+        Task Send(byte[] message, int offset, int count, CancellationToken token);
     }
 }

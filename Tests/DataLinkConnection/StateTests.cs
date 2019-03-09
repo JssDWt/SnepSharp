@@ -22,6 +22,7 @@
 namespace Tests.DataLinkConnection
 {
     using System;
+    using Moq;
     using SnepSharp.Llcp;
     using Xunit;
 
@@ -30,7 +31,9 @@ namespace Tests.DataLinkConnection
         [Fact]
         public void Connect_Address_StateNotClosed_Throws()
         {
-            ISocket socket = new DataLinkConnection();
+            var llc = new Mock<LogicalLinkControl>();
+            ISocket socket = new DataLinkConnection(llc.Object);
+            socket.
         }
     }
 }

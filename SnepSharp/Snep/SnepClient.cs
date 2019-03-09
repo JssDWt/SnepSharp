@@ -26,6 +26,8 @@ namespace SnepSharp.Snep
     using SnepSharp.Llcp;
     using SnepSharp.Snep.Messages;
     using SnepSharp.Ndef;
+    using System.Threading.Tasks;
+    using System.Threading;
 
     /// <summary>
     /// Snep client to interchange <see cref="INdefMessage"/> with a SNEP 
@@ -128,13 +130,16 @@ namespace SnepSharp.Snep
             }
         }
 
+        public Task Put(INdefMessage message)
+            => this.Put(message, new CancellationToken(false));
+
         /// <summary>
         /// Puts the specified message to the server.
         /// </summary>
         /// <param name="message">Message to put.</param>
         /// <exception cref="SnepException">Thrown if any protocol related issue
         /// is encountered.</exception>
-        public void Put(INdefMessage message)
+        public async Task Put(INdefMessage message, CancellationToken token)
         {
             if (message == null)
             {
@@ -143,9 +148,9 @@ namespace SnepSharp.Snep
 
             this.Connect();
             var snepMessage = new SnepPutRequest(message);
-            this.messenger.SendMessage(snepMessage);
+            await this.messenger.SendMessage(snepMessage);
 
-            var response = (SnepResponse)this.messenger.GetMessage();
+            var response = (SnepResponse)await this.messenger.GetMessage(token);
             switch (response.Response)
             {
                 case SnepResponseCode.Success:
@@ -166,6 +171,9 @@ namespace SnepSharp.Snep
             }
         }
 
+        public Task<INdefMessage> Get(INdefMessage request)
+            => this.Get(request, new CancellationToken(false));
+
         /// <summary>
         /// Gets a resource from the server, specified by the request.
         /// </summary>
@@ -181,13 +189,19 @@ namespace SnepSharp.Snep
         /// <see cref="Stream"/> in the <see cref="INdefMessage"/>. So do not 
         /// close the <see cref="SnepClient"/> until the message was read.
         /// </remarks>
-        public INdefMessage Get(INdefMessage request)
+        public async Task<INdefMessage> Get(
+            INdefMessage request,
+            CancellationToken token)
         {
-            if (request == null) throw new ArgumentNullException(nameof(request));
+            if (request == null)
+            {
+                throw new ArgumentNullException(nameof(request));
+            }
+
             this.Connect();
             var snepMessage = new SnepGetRequest(request, this.MaxResponseSize);
-            this.messenger.SendMessage(snepMessage);
-            var response = (SnepResponse)this.messenger.GetMessage();
+            await this.messenger.SendMessage(snepMessage);
+            var response = (SnepResponse)await this.messenger.GetMessage(token);
 
             INdefMessage result;
             switch (response.Response)

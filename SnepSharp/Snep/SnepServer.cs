@@ -261,11 +261,9 @@ namespace SnepSharp.Snep
                     while (!token.IsCancellationRequested)
                     {
                         var clientSocket = serverSocket.Accept(token);
-                        var clientTask = Task.Factory.StartNew(
+                        var clientTask = Task.Run(
                             () => RunClientConnection(clientSocket, token),
-                            token,
-                            TaskCreationOptions.LongRunning,
-                            TaskScheduler.Current);
+                            token);
                         lock (this.padlock)
                         {
                             this.clientTasks.Add(clientTask);
@@ -291,8 +289,8 @@ namespace SnepSharp.Snep
             }
         }
 
-        private void RunClientConnection(
-            DataLinkConnection socket, 
+        private async Task RunClientConnection(
+            ISocket socket, 
             CancellationToken token)
         {
             var messenger = new SnepMessenger(
@@ -310,13 +308,14 @@ namespace SnepSharp.Snep
 
                     try
                     {
-                        request = (SnepRequest)messenger.GetMessage();
+                        request = (SnepRequest)await messenger.GetMessage(token);
                     }
                     catch (SnepException)
                     {
                         try
                         {
-                            messenger.SendMessage(new SnepBadRequestResponse());
+                            await messenger.SendMessage(
+                                new SnepBadRequestResponse());
                         }
                         catch
                         {
@@ -330,7 +329,7 @@ namespace SnepSharp.Snep
 
                     if (request.Header.Version != Constants.DefaultSnepVersion)
                     {
-                        messenger.SendMessage(
+                        await messenger.SendMessage(
                             new SnepUnsupportedVersionResponse());
                         continue;
                     }
@@ -387,7 +386,7 @@ namespace SnepSharp.Snep
                                 $"{request.Request.ToString()}'.");
                     }
 
-                    messenger.SendMessage(response);
+                    await messenger.SendMessage(response);
                 }
                 catch (Exception)
                 {
