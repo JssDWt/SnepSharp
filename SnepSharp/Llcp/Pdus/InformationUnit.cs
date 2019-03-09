@@ -38,7 +38,7 @@ namespace SnepSharp.Llcp.Pdus
         /// <param name="serviceData">Service data.</param>
         public InformationUnit(
             DataLink connection, 
-            SequenceNumber sequence, 
+            SequencePair sequence, 
             byte[] serviceData)
             : base(
                 connection, 

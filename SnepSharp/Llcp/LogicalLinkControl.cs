@@ -57,10 +57,10 @@ namespace SnepSharp.Llcp
         public bool IsInitiator { get; private set; }
         public SocketState State { get; private set; } = SocketState.Shutdown;
         public int ReceiveMiu { get; }
-        public TimeSpan SendLinkTimeout { get; }
+        public int SendLinkTimeout { get; }
 
         public int SendMiu { get; private set; }
-        public TimeSpan ReceiveLinkTimeout { get; private set; }
+        public int ReceiveLinkTimeout { get; private set; }
         public ICollection<LinkAddress> RemoteWks { get; private set; }
         public LlcpVersion RemoteVersion { get; private set; }
 
@@ -72,7 +72,7 @@ namespace SnepSharp.Llcp
             }
 
             this.ReceiveMiu = options.MaximumInformationUnit;
-            this.SendLinkTimeout = options.LinkTimeout;
+            this.SendLinkTimeout = (int)options.LinkTimeout.TotalMilliseconds;
             this.serviceNames.Add(
                 Constants.ServiceDiscoveryProtocolName, 
                 1);
@@ -84,7 +84,7 @@ namespace SnepSharp.Llcp
             this.ServiceAccessPoints[1] = this.serviceDiscoveryPoint;
         }
 
-        public Socket CreateSocket() => new Socket(this);
+        public DataLinkConnection CreateSocket() => new DataLinkConnection(this);
 
         public ServerSocket CreateServerSocket() => new ServerSocket(this);
 
@@ -123,7 +123,7 @@ namespace SnepSharp.Llcp
             {
                 this.Exchange(
                     new DisconnectUnit(DataLink.Empty),
-                    TimeSpan.FromMilliseconds(500));
+                    500);
             }
 
             this.mac.Deactivate();
@@ -137,7 +137,7 @@ namespace SnepSharp.Llcp
             this.State = SocketState.Shutdown;
         }
 
-        internal void Bind(Socket socket, string serviceName)
+        internal void Bind(DataLinkConnection socket, string serviceName)
         {
             if (socket == null) throw new ArgumentNullException(nameof(socket));
             if (serviceName == null)
@@ -176,7 +176,7 @@ namespace SnepSharp.Llcp
             }
         }
 
-        internal void Bind(Socket socket, LinkAddress address)
+        internal void Bind(DataLinkConnection socket, LinkAddress address)
         {
             if (socket == null) throw new ArgumentNullException(nameof(socket));
             if (!LinkAddress.UpperLayerSaps.Contains(address))
@@ -199,7 +199,7 @@ namespace SnepSharp.Llcp
             }
         }
 
-        internal void Bind(Socket socket)
+        internal void Bind(DataLinkConnection socket)
         {
             if (socket == null) throw new ArgumentNullException(nameof(socket));
 
@@ -213,7 +213,7 @@ namespace SnepSharp.Llcp
             }
         }
 
-        internal void AddToSap(Socket socket)
+        internal void AddToSap(DataLinkConnection socket)
         {
             if (socket == null) throw new ArgumentNullException(nameof(socket));
             lock (this.padlock)
@@ -229,20 +229,20 @@ namespace SnepSharp.Llcp
             }
         }
 
-        internal bool Send(Socket socket, ProtocolDataUnit message)
+        internal bool Send(DataLinkConnection socket, ProtocolDataUnit message)
         {
             throw new NotImplementedException();
         }
 
         internal bool SendTo(
-            Socket socket, 
+            DataLinkConnection socket, 
             ProtocolDataUnit message, 
             LinkAddress destination)
         {
             throw new NotImplementedException();
         }
 
-        internal ProtocolDataUnit Receive(Socket socket)
+        internal ProtocolDataUnit Receive(DataLinkConnection socket)
         {
             throw new NotImplementedException();
         }
@@ -281,7 +281,7 @@ namespace SnepSharp.Llcp
         /// <param name="timeout">Timeout.</param>
         private ProtocolDataUnit Exchange(
             ProtocolDataUnit sendPdu, 
-            TimeSpan timeout)
+            int timeout)
         {
             if (sendPdu != null)
             {
@@ -306,30 +306,19 @@ namespace SnepSharp.Llcp
         /// <returns>The pax.</returns>
         private ParameterExchangeUnit CreatePax()
         {
-            var parameters = new ParameterList();
-
-            // this.macMapping = null;
             var boundWks = this.serviceNames.Values.Cast<LinkAddress>()
                 .Intersect(LinkAddress.WellknownSaps)
                 .ToList();
-            var wks = new WksParameter(boundWks);
-            parameters.Add(wks);
 
-            if (this.ReceiveMiu != Constants.MaximumInformationUnit)
-            {
-                parameters.Add(new MiuxParameter(
-                    this.ReceiveMiu - Constants.MaximumInformationUnit));
-            }
+            // TODO: If connectionless transport is supported, add it here.
+            var pax = new ParameterExchangeUnit(
+                LlcpVersion.V13,
+                this.ReceiveMiu,
+                boundWks,
+                this.SendLinkTimeout,
+                LinkServiceClass.ConnectionOriented);
 
-            if (this.SendLinkTimeout.Milliseconds != Constants.DefaultTimeout)
-            {
-                parameters.Add(new LinkTimeoutParameter(
-                    this.SendLinkTimeout.Milliseconds));
-            }
-
-            // TODO: How to get this datalink??
-            var zeroLink = new DataLink((LinkAddress)0, (LinkAddress)0);
-            return new ParameterExchangeUnit(zeroLink, parameters);
+            return pax;
         }
 
         /// <summary>
@@ -344,7 +333,7 @@ namespace SnepSharp.Llcp
 
             var remoteMiux = (MiuxParameter)receivePax.Parameters
                 .FirstOrDefault(p => p.Type == ParameterType.MiuxExtension);
-            this.SendMiu = remoteMiux?.ActualMiu
+            this.SendMiu = remoteMiux?.MaximumInformationUnit
                 ?? Constants.MaximumInformationUnit;
 
             var wks = (WksParameter)receivePax.Parameters.FirstOrDefault(
@@ -355,7 +344,7 @@ namespace SnepSharp.Llcp
                 .FirstOrDefault(p => p.Type == ParameterType.LinkTimeout);
             int timeoutMs = lto?.TimeoutMilliseconds
                 ?? Constants.DefaultTimeout;
-            this.ReceiveLinkTimeout = TimeSpan.FromMilliseconds(timeoutMs);
+            this.ReceiveLinkTimeout = timeoutMs;
         }
 
         /// <summary>
@@ -380,8 +369,8 @@ namespace SnepSharp.Llcp
         /// <param name="token">Cancellation token.</param>
         private void RunAsTarget(CancellationToken token)
         {
-            var receiveTimeout = this.ReceiveLinkTimeout
-                + TimeSpan.FromSeconds(10);
+            // TODO: is this +10 necessary?
+            var receiveTimeout = this.ReceiveLinkTimeout + 10;
 
             int consecutiveSymms = 0;
             var receivePdu = this.Exchange(null, receiveTimeout);
@@ -420,7 +409,7 @@ namespace SnepSharp.Llcp
 
                 if (sendPdu == null)
                 {
-                    sendPdu = new SymmetryUnit(DataLink.Empty);
+                    sendPdu = new SymmetryUnit();
                 }
 
                 receivePdu = this.Exchange(sendPdu, receiveTimeout);
@@ -435,8 +424,8 @@ namespace SnepSharp.Llcp
         /// <param name="token">Cancelation token.</param>
         private void RunAsInitiator(CancellationToken token)
         {
-            var receiveTimeout = this.ReceiveLinkTimeout 
-                + TimeSpan.FromSeconds(10);
+            // TODO: Is this +10 milliseconds necessary?
+            var receiveTimeout = this.ReceiveLinkTimeout + 10;
 
             int consecutiveSymms = 0;
             var sendPdu = this.Collect(TimeSpan.FromMilliseconds(100));
@@ -446,7 +435,7 @@ namespace SnepSharp.Llcp
             {
                 if (sendPdu == null)
                 {
-                    sendPdu = new SymmetryUnit(DataLink.Empty);
+                    sendPdu = new SymmetryUnit();
                 }
 
                 var receivePdu = this.Exchange(sendPdu, receiveTimeout);
@@ -498,22 +487,31 @@ namespace SnepSharp.Llcp
 
             lock (this.padlock)
             {
+                var activeSaps = this.ServiceAccessPoints.Where(
+                    sap => sap != null).ToList();
                 ProtocolDataUnit sendPdu = null;
-                foreach (var sap in this.ServiceAccessPoints.Where(
-                    sap => sap != null))
+                foreach (var sap in activeSaps)
                 {
                     sendPdu = sap.SendAcknowledgement();
                     if (sendPdu != null)
                     {
-                        break;
+                        return sendPdu;
                     }
                 }
 
-                if (sendPdu == null) return null;
+                foreach (var sap in activeSaps)
+                {
+                    sendPdu = sap.DequeueForSend(this.ReceiveMiu);
+                    if (sendPdu != null)
+                    {
+                        return sendPdu;
+                    }
+                }
 
                 // TODO: support aggregated frame pdu
-                return sendPdu;
             }
+
+            return null;
         }
 
         /// <summary>
@@ -529,7 +527,7 @@ namespace SnepSharp.Llcp
 
             if (receivePdu.Type == ProtocolDataUnitType.AggregatedFrame)
             {
-                if (receivePdu.DataLinkConnection == DataLink.Empty)
+                if (receivePdu.DataLink == DataLink.Empty)
                 {
                     var agg = (AggregatedFrameUnit)receivePdu;
                     foreach (var pdu in agg.Aggregate)
@@ -544,7 +542,7 @@ namespace SnepSharp.Llcp
             lock (this.padlock)
             {
                 if (receivePdu.Type == ProtocolDataUnitType.Connect
-                && receivePdu.DataLinkConnection.Destination 
+                && receivePdu.DataLink.Destination 
                     == LinkAddress.ServiceDiscoveryProtocolSap)
                 {
                     var connect = (ConnectUnit)receivePdu;
@@ -582,7 +580,7 @@ namespace SnepSharp.Llcp
                         var disconnectPdu = new DisconnectedModeUnit(
                             new DataLink(
                                 LinkAddress.ServiceDiscoveryProtocolSap,
-                                receivePdu.DataLinkConnection.Source),
+                                receivePdu.DataLink.Source),
                             reason);
                         this.serviceDiscoveryPoint.DisconnectedModePdus.Add(
                             disconnectPdu);
@@ -592,17 +590,17 @@ namespace SnepSharp.Llcp
                     // service found. Rewrite the connect unit to the bound service.
                     receivePdu = new ConnectUnit(
                         new DataLink(
-                            receivePdu.DataLinkConnection.Source,
+                            receivePdu.DataLink.Source,
                             (LinkAddress)address),
-                        connect.MaximumInformationUnitExtension,
+                        connect.MaximumInformationUnit,
                         connect.ReceiveWindowSize);
                 }
 
                 var sap = this.ServiceAccessPoints[
-                    receivePdu.DataLinkConnection.Destination];
+                    receivePdu.DataLink.Destination];
                 if (sap != null)
                 {
-                    sap.Enqueue(receivePdu);
+                    sap.EnqueueReceived(receivePdu);
                 }
             }
         }

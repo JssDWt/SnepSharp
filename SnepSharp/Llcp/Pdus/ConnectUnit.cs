@@ -30,10 +30,10 @@ namespace SnepSharp.Llcp.Pdus
     internal class ConnectUnit : ProtocolDataUnit
     {
         /// <summary>
-        /// Gets the maximum information unit extension. (MIUX)
+        /// Gets the maximum information unit. (MIU)
         /// </summary>
-        /// <value>The maximum information unit extension.</value>
-        public int MaximumInformationUnitExtension { get; }
+        /// <value>The maximum information unit.</value>
+        public int MaximumInformationUnit { get; }
 
         /// <summary>
         /// Gets the size of the receive window. (RW)
@@ -51,21 +51,21 @@ namespace SnepSharp.Llcp.Pdus
         /// Initializes a new instance of the <see cref="ConnectUnit"/> class.
         /// </summary>
         /// <param name="connection">Data link connection.</param>
-        /// <param name="miux">The maximum information unit extension.</param>
+        /// <param name="miu">The maximum information unit.</param>
         /// <param name="receiveWindowSize">Receive window size.</param>
         /// <param name="serviceName">Service name.</param>
         public ConnectUnit(
             DataLink connection, 
-            int miux = 0,
+            int miu = Constants.MaximumInformationUnit,
             int receiveWindowSize = 1,
             string serviceName = null)
             : base(
                 connection, 
                 ProtocolDataUnitType.Connect, 
                 null, 
-                ToBytes(miux, receiveWindowSize, serviceName))
+                ToBytes(miu, receiveWindowSize, serviceName))
         {
-            this.MaximumInformationUnitExtension = miux;
+            this.MaximumInformationUnit = miu;
             this.ReceiveWindowSize = receiveWindowSize;
             this.ServiceName = serviceName;
         }
@@ -74,12 +74,12 @@ namespace SnepSharp.Llcp.Pdus
         /// Converts the parameters to bytes.
         /// </summary>
         /// <returns>The bytes, or null if the parameter list is null.</returns>
-        private static byte[] ToBytes(int miux, int rw, string sn)
+        private static byte[] ToBytes(int miu, int rw, string sn)
         {
             var parameters = new ParameterList();
-            if (miux != 0)
+            if (miu != Constants.MaximumInformationUnit)
             {
-                parameters.Add(new MiuxParameter(miux));
+                parameters.Add(new MiuxParameter(miu));
             }
 
             if (rw != 1)

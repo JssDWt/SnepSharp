@@ -42,13 +42,11 @@ namespace SnepSharp.Llcp.Pdus
         /// Initializes a new instance of the <see cref="AggregatedFrameUnit"/> 
         /// class.
         /// </summary>
-        /// <param name="connection">Data link connection.</param>
         /// <param name="aggregate">Aggregate of protocol data units.</param>
         public AggregatedFrameUnit(
-            DataLink connection, 
             ICollection<ProtocolDataUnit> aggregate)
             : base(
-                  connection, 
+                  DataLink.Empty, 
                   ProtocolDataUnitType.AggregatedFrame, 
                   null, 
                   ToBytes(aggregate))

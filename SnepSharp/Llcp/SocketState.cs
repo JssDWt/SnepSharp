@@ -18,18 +18,50 @@
 //
 //  You should have received a copy of the GNU General Public License
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
-using System;
+
 namespace SnepSharp.Llcp
 {
-    public enum SocketState
+    public enum SocketState : byte
     {
+        /// <summary>
+        /// Indicates the socket is shutdown and cannot be reopened.
+        /// </summary>
         Shutdown,
+
+        /// <summary>
+        /// Indicates the socket has not yet been opened.
+        /// </summary>
         Closed,
+
+        /// <summary>
+        /// Indicates the socket is listening for incoming connections.
+        /// </summary>
         Listening,
+
+        /// <summary>
+        /// Indicates the socket is trying to connect to a peer.
+        /// </summary>
         Connecting,
+
+        /// <summary>
+        /// Indicates the socket is connected to a peer.
+        /// </summary>
         Connected,
+
+        /// <summary>
+        /// 
+        /// </summary>
         Established,
+
+        /// <summary>
+        /// Indicates the socket is in the process of disconnecting from the 
+        /// peer.
+        /// </summary>
         Disconnecting,
+
+        /// <summary>
+        /// Indicates the socket is closing to be shutdown shortly.
+        /// </summary>
         Closing
     }
 }

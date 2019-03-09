@@ -1,5 +1,5 @@
 ﻿//
-//  SequenceNumber.cs
+//  SequencePair.cs
 //
 //  Author:
 //       Jesse de Wit <witdejesse@hotmail.com>
@@ -21,13 +21,19 @@
 
 namespace SnepSharp.Llcp
 {
-    using System;
-
     /// <summary>
     /// Represents a Protocol Data Unit sequence number in the header.
     /// </summary>
-    public struct SequenceNumber
+    public struct SequencePair
     {
+        /// <summary>
+        /// Sequence number reperesenting zero for both the send and receive 
+        /// part.
+        /// </summary>
+        public static readonly SequencePair Zero = new SequencePair(
+            (SequenceNumber)0,
+            (SequenceNumber)0);
+
         /// <summary>
         /// Gets the sequence number, as used in the PDU header.
         /// </summary>
@@ -38,24 +44,24 @@ namespace SnepSharp.Llcp
         /// Gets the send sequence part of the sequence number.
         /// </summary>
         /// <value>The send sequence.</value>
-        public byte SendSequence { get; }
+        public SequenceNumber SendSequence { get; }
 
         /// <summary>
         /// Gets the receive sequence part of the sequence number.
         /// </summary>
         /// <value>The receive sequence.</value>
-        public byte ReceiveSequence { get; }
+        public SequenceNumber ReceiveSequence { get; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="T:Llcp.SequenceNumber"/> struct,
         /// When a PDU is received from the other party.
         /// </summary>
         /// <param name="sequence">The PDU sequence number.</param>
-        public SequenceNumber(byte sequence)
+        public SequencePair(byte sequence)
         {
             this.Sequence = sequence;
-            this.SendSequence = (byte)((sequence >> 4) & 0x0F);
-            this.ReceiveSequence = (byte)(sequence & 0x0F);
+            this.SendSequence = (SequenceNumber)((sequence >> 4) & 0x0F);
+            this.ReceiveSequence = (SequenceNumber)(sequence & 0x0F);
         }
 
         /// <summary>
@@ -64,18 +70,8 @@ namespace SnepSharp.Llcp
         /// </summary>
         /// <param name="send">Send sequence number.</param>
         /// <param name="receive">Receive sequence number.</param>
-        public SequenceNumber(byte send, byte receive)
+        public SequencePair(SequenceNumber send, SequenceNumber receive)
         {
-            if (send < 0x00 || send > 0x0F)
-            {
-                throw new ArgumentOutOfRangeException(nameof(send), "sequence number should fit in four bits (0x00 to 0x0F).");
-            }
-
-            if (receive < 0x00 || receive > 0x0F)
-            {
-                throw new ArgumentOutOfRangeException(nameof(receive), "sequence number should fit in four bits (0x00 to 0x0F).");
-            }
-
             this.SendSequence = send;
             this.ReceiveSequence = receive;
 

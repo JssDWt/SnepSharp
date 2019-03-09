@@ -32,60 +32,50 @@ namespace SnepSharp.Llcp.Parameters
     internal class MiuxParameter : Parameter
     {
         /// <summary>
-        /// The maximum size for the Maximum Information Unit Extension (MIUX).
-        /// Should fit in 11 bits.
+        /// The maximum size for the Maximum Information Unit.
+        /// The extension should fit in 11 bits.
         /// </summary>
-        const int MaximumSize = 2047;
-
-        /// <summary>
-        /// Gets the size extension, or the number of octets by which an 
-        /// information field MAY exceed the default maximum size.
-        /// </summary>
-        /// <value>The size extension.</value>
-        public int SizeExtension { get; }
+        const int MaximumSize = 2047 + Constants.MaximumInformationUnit;
 
         /// <summary>
         /// Gets the actual Maximum Information Unit, as negotiated by this 
         /// parameter.
         /// </summary>
         /// <value>The actual Maximum Information Unit.</value>
-        public int ActualMiu 
-            => this.SizeExtension + Constants.MaximumInformationUnit;
+        public int MaximumInformationUnit { get; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MiuxParameter"/> class.
         /// </summary>
-        /// <param name="sizeExtension">size extension, or the number of octets 
-        /// by which an information field MAY exceed the default maximum size.
-        /// </param>
-        public MiuxParameter(int sizeExtension)
-            : base(ParameterType.MiuxExtension, AsBytes(sizeExtension))
+        /// <param name="miu">Maximum information unit size in bytes.</param>
+        public MiuxParameter(int miu)
+            : base(ParameterType.MiuxExtension, AsBytes(miu))
         {
-            this.SizeExtension = sizeExtension;
+            this.MaximumInformationUnit = miu;
         }
 
         /// <summary>
         /// Creates a byte representation of the size extension.
         /// </summary>
         /// <returns>The bytes.</returns>
-        /// <param name="sizeExtension">Size extension.</param>
-        private static byte[] AsBytes(int sizeExtension)
+        /// <param name="miu">Maximum information unit size.</param>
+        private static byte[] AsBytes(int miu)
         {
-            if (sizeExtension < 0)
+            if (miu < Constants.MaximumInformationUnit)
             {
-                throw new ArgumentException(
-                    "Must be greater than zero.",
-                    nameof(sizeExtension));
+                throw new ArgumentOutOfRangeException(
+                    nameof(miu),
+                    "Cannot be smaller than 128.");
             }
 
-            if (sizeExtension > MaximumSize)
+            if (miu > MaximumSize)
             {
-                throw new ArgumentException(
-                    $"Size extension cannot be greater than {MaximumSize}", 
-                    nameof(sizeExtension));
+                throw new ArgumentOutOfRangeException(
+                    nameof(miu),
+                    $"Cannot be greater than {MaximumSize}.");
             }
 
-            var bytes = sizeExtension.ToByteArray();
+            var bytes = (miu - Constants.MaximumInformationUnit).ToByteArray();
             int length = bytes.Length;
             var result = new byte[2];
             result[0] = bytes[length - 2];

@@ -228,7 +228,7 @@ namespace SnepSharp.Snep
             var socket = this.llc.CreateSocket();
             if (this.SapAddress == -1)
             {
-                socket.Connect(this.ServiceName);
+                socket.Bind(this.ServiceName);
             }
             else
             {

@@ -28,7 +28,7 @@ namespace SnepSharp.Llcp
 
     internal class ServiceAccessPoint : IDisposable
     {
-        private readonly List<Socket> sockets = new List<Socket>();
+        private readonly List<DataLinkConnection> sockets = new List<DataLinkConnection>();
         private readonly Queue<ProtocolDataUnit> sendQueue 
             = new Queue<ProtocolDataUnit>();
 
@@ -43,7 +43,7 @@ namespace SnepSharp.Llcp
 
         public LinkAddress Address { get; }
 
-        public void AddSocket(Socket socket)
+        public void AddSocket(DataLinkConnection socket)
         {
             if (socket.Address.HasValue)
             {
@@ -52,11 +52,11 @@ namespace SnepSharp.Llcp
                     nameof(socket));
             }
 
-            socket.Bind(this.Address);
+            socket.Address = this.Address;
             this.sockets.Add(socket);
         }
 
-        public void RemoveSocket(Socket socket)
+        public void RemoveSocket(DataLinkConnection socket)
         {
             if (socket.Address != this.Address)
             {
@@ -78,7 +78,7 @@ namespace SnepSharp.Llcp
             this.sendQueue.Enqueue(sendPdu);
         }
 
-        public void Enqueue(ProtocolDataUnit receivePdu)
+        public void EnqueueReceived(ProtocolDataUnit receivePdu)
         {
             if (receivePdu is ConnectUnit)
             {
@@ -89,19 +89,19 @@ namespace SnepSharp.Llcp
                 {
                     // No listening socket, send disconnect.
                     var disconnect = new DisconnectedModeUnit(
-                        receivePdu.DataLinkConnection,
+                        receivePdu.DataLink,
                         DisconnectReason.NoActiveConnection);
                     this.Send(disconnect);
                 }
                 else
                 {
-                    listeningSocket.Enqueue(receivePdu);
+                    listeningSocket.EnqueueReceived(receivePdu);
                 }
             }
             else
             {
                 var socket = this.sockets.FirstOrDefault(
-                    s => s.Peer == receivePdu.DataLinkConnection.Source
+                    s => s.Peer == receivePdu.DataLink.Source
                         || !s.Peer.HasValue);
 
                 if (socket == null)
@@ -117,7 +117,7 @@ namespace SnepSharp.Llcp
                         case ProtocolDataUnitType.ReceiveReady:
                         case ProtocolDataUnitType.ReceiveNotReady:
                             var disconnect = new DisconnectedModeUnit(
-                                receivePdu.DataLinkConnection,
+                                receivePdu.DataLink,
                                 DisconnectReason.NoActiveConnection);
                             this.Send(disconnect);
                             break;
@@ -125,7 +125,7 @@ namespace SnepSharp.Llcp
                 }
                 else
                 {
-                    socket.Enqueue(receivePdu);
+                    socket.EnqueueReceived(receivePdu);
                 }
             }
         }
@@ -135,11 +135,11 @@ namespace SnepSharp.Llcp
         /// </summary>
         /// <returns>The dequeued pdu.</returns>
         /// <param name="maximumInformationUnit">Maximum information unit.</param>
-        public ProtocolDataUnit Dequeue(int maximumInformationUnit)
+        public ProtocolDataUnit DequeueForSend(int maximumInformationUnit)
         {
             foreach (var socket in this.sockets)
             {
-                var sendPdu = socket.Dequeue(maximumInformationUnit);
+                var sendPdu = socket.DequeueForSend(maximumInformationUnit);
                 if (sendPdu != null)
                 {
                     return sendPdu;
@@ -180,7 +180,6 @@ namespace SnepSharp.Llcp
         {
             foreach(var socket in this.sockets)
             {
-                socket.Unbind();
                 socket.Close();
             }
 

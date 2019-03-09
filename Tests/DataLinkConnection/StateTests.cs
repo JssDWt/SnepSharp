@@ -1,5 +1,5 @@
 ﻿//
-//  SymmetryUnit.cs
+//  FlowTests.cs
 //
 //  Author:
 //       Jesse de Wit <witdejesse@hotmail.com>
@@ -19,20 +19,18 @@
 //  You should have received a copy of the GNU General Public License
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-namespace SnepSharp.Llcp.Pdus
+namespace Tests.DataLinkConnection
 {
-    /// <summary>
-    /// Symmetry unit (SYMM). Sent by an LLC whenever no other PDUs are 
-    /// available for sending, to ensure symmetry.
-    /// </summary>
-    internal class SymmetryUnit : ProtocolDataUnit
+    using System;
+    using SnepSharp.Llcp;
+    using Xunit;
+
+    public class StateTests
     {
-        /// <summary>
-        /// Initializes a new instance of the <see cref="SymmetryUnit"/> class.
-        /// </summary>
-        public SymmetryUnit()
-            : base(DataLink.Empty, ProtocolDataUnitType.Symmetry, null, null)
+        [Fact]
+        public void Connect_Address_StateNotClosed_Throws()
         {
+            ISocket socket = new DataLinkConnection();
         }
     }
 }

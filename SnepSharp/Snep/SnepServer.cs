@@ -292,7 +292,7 @@ namespace SnepSharp.Snep
         }
 
         private void RunClientConnection(
-            Socket socket, 
+            DataLinkConnection socket, 
             CancellationToken token)
         {
             var messenger = new SnepMessenger(

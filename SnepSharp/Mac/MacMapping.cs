@@ -80,10 +80,10 @@ namespace SnepSharp.Mac
         public bool LengthReductionTarget { get; } = true;
 
         /// <summary>
-        /// Gets the response waiting time (RWT).
+        /// Gets the response waiting time (RWT) in milliseconds.
         /// </summary>
         /// <value>The response waiting time.</value>
-        public TimeSpan ResponseWaitingTime { get; }
+        public int ResponseWaitingTime { get; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MacMapping"/> 
@@ -111,7 +111,7 @@ namespace SnepSharp.Mac
 
         public ProtocolDataUnit Exchange(
             ProtocolDataUnit sendPdu, 
-            TimeSpan timeout)
+            int timeout)
         {
             throw new NotImplementedException();
         }

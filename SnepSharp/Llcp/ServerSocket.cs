@@ -30,24 +30,25 @@ namespace SnepSharp.Llcp
 
         internal ServerSocket(LogicalLinkControl llc)
         {
+            this.llc = llc;
         }
 
-        public Socket Accept() => this.Accept(new CancellationToken(false));
+        public DataLinkConnection Accept() => this.Accept(new CancellationToken(false));
 
-        public Socket Accept(CancellationToken token)
+        public DataLinkConnection Accept(CancellationToken token)
         {
             while (!token.IsCancellationRequested)
             {
                 // TODO: actual socket creation logic.
-                Socket clientSocket = null;
+                DataLinkConnection clientSocket = null;
                 throw new NotImplementedException();
                 if (clientSocket == null) continue;
 
                 this.llc.AddToSap(clientSocket);
 
-                if (clientSocket.SendMiu > this.llc.SendMiu)
+                if (clientSocket.RemoteMiu > this.llc.SendMiu)
                 {
-                    clientSocket.SendMiu = this.llc.SendMiu;
+                    clientSocket.RemoteMiu = this.llc.SendMiu;
                 }
 
                 return clientSocket;

@@ -44,7 +44,7 @@ namespace SnepSharp.Snep
         /// <summary>
         /// The Llcp socket to send messages over.
         /// </summary>
-        private Socket socket;
+        private DataLinkConnection socket;
 
         /// <summary>
         /// Handles to returned <see cref="SnepMessageStream"/>. They will be 
@@ -72,7 +72,7 @@ namespace SnepSharp.Snep
         /// server.</param>
         public SnepMessenger(
             bool isClient, 
-            Socket socket, 
+            DataLinkConnection socket, 
             INdefParser ndefParser, 
             int maxReceiveContentSize)
         {
@@ -96,7 +96,7 @@ namespace SnepSharp.Snep
             using (var messageStream = message.AsStream())
             {
                 int firstFragmentLength = Math.Min(
-                    socket.MaximumInformationUnit, 
+                    socket.LocalMiu, 
                     message.MessageLength);
                 var sendBuffer = new byte[firstFragmentLength];
                 int bytesRead = messageStream.Read(sendBuffer, 0, firstFragmentLength);
@@ -108,12 +108,11 @@ namespace SnepSharp.Snep
                 }
 
                 // If we arrive here, the message to send is fragmented.
-                // Wait for continue.
-                var receiveBuffer = new byte[this.socket.MaximumInformationUnit];
-                int bytesReceived = socket.Receive(receiveBuffer);
+                // Wait for continue. 
+                // TODO: pass in cancellationtoken.
+                var receiveBuffer = socket.Receive();
                 var response = SnepMessage.Parse(
                     receiveBuffer, 
-                    bytesReceived,
                     this.ndefParser);
 
                 // Request and response 'Continue' are different codes.
@@ -145,7 +144,7 @@ namespace SnepSharp.Snep
 
                 while (offset < message.MessageLength || bytesRead == 0)
                 {
-                    int currentFragmentSize = Math.Min(socket.MaximumInformationUnit, message.MessageLength - offset);
+                    int currentFragmentSize = Math.Min(socket.LocalMiu, message.MessageLength - offset);
                     bytesRead = messageStream.Read(sendBuffer, 0, currentFragmentSize);
                     socket.Send(sendBuffer, bytesRead);
                     offset += currentFragmentSize;
@@ -166,8 +165,9 @@ namespace SnepSharp.Snep
         /// reading the returned messages.</remarks>
         public SnepMessage GetMessage()
         {
-            var receiveBuffer = new byte[socket.MaximumInformationUnit];
-            int bytesReceived = socket.Receive(receiveBuffer);
+            // TODO: support cancellation.
+            var receiveBuffer = socket.Receive();
+            int bytesReceived = receiveBuffer.Length;
 
             if (bytesReceived < Constants.SnepHeaderLength)
             {
@@ -268,9 +268,10 @@ namespace SnepSharp.Snep
                 while (bytesReceived < 
                     header.ContentLength + Constants.SnepHeaderLength)
                 {
-                    int currentBytes = socket.Receive(receiveBuffer);
-                    bytesReceived += currentBytes;
-                    message.Write(receiveBuffer, 0, currentBytes);
+                    // TODO: Support cancellation.
+                    var currentBuffer = socket.Receive();
+                    bytesReceived += currentBuffer.Length;
+                    message.Write(currentBuffer, 0, currentBuffer.Length);
                 }
 
                 result = SnepMessage.Parse(
@@ -334,7 +335,7 @@ namespace SnepSharp.Snep
             /// <summary>
             /// The socket to drag in more data.
             /// </summary>
-            private Socket socket;
+            private DataLinkConnection socket;
 
             /// <summary>
             /// The internal buffer offset.
@@ -349,7 +350,7 @@ namespace SnepSharp.Snep
             /// <summary>
             /// The internal buffer.
             /// </summary>
-            private readonly byte[] internalBuffer;
+            private byte[] internalBuffer;
 
             /// <summary>
             /// The amount of bytes received over llcp.
@@ -366,7 +367,7 @@ namespace SnepSharp.Snep
             /// </summary>
             /// <param name="initialFragment">Initial fragment.</param>
             /// <param name="socket">Llcp socket.</param>
-            public SnepMessageStream(SnepHeader header, byte[] initialFragment, Socket socket)
+            public SnepMessageStream(SnepHeader header, byte[] initialFragment, DataLinkConnection socket)
             {
                 this.header = header;
                 this.socket = socket;
@@ -429,7 +430,9 @@ namespace SnepSharp.Snep
                 // If we get here, refill the buffer over llcp.
                 while (!this.endReached && currentCount < count)
                 {
-                    int currentBytes = socket.Receive(this.internalBuffer);
+                    // TODO: support cancellation.
+                    this.internalBuffer = socket.Receive();
+                    int currentBytes = this.internalBuffer.Length;
                     this.contentBytesReceived += currentBytes;
                     this.internalOffset = 0;
                     this.internalCount = currentBytes;

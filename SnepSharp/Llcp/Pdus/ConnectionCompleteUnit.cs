@@ -29,32 +29,46 @@ namespace SnepSharp.Llcp.Pdus
     /// </summary>
     internal class ConnectionCompleteUnit : ProtocolDataUnit
     {
+        public int MaximumInformationUnit { get; }
+        public int ReceiveWindowSize { get; }
+
         /// <summary>
         /// Initializes a new instance of the 
         /// <see cref="ConnectionCompleteUnit"/> class.
         /// </summary>
         /// <param name="connection">Data link connection.</param>
-        /// <param name="parameters">Optional connection specific parameters.
-        /// </param>
         public ConnectionCompleteUnit(
             DataLink connection, 
-            ParameterList parameters)
+            int miu = Constants.MaximumInformationUnit,
+            int receiveWindowSize = Constants.DefaultReceiveWindowSize)
             : base(
                   connection, 
                   ProtocolDataUnitType.ConnectionComplete, 
                   null, 
-                  ToBytes(parameters))
+                  ToBytes(miu, receiveWindowSize))
         {
+            this.MaximumInformationUnit = miu;
+            this.ReceiveWindowSize = receiveWindowSize;
         }
 
         /// <summary>
         /// Converts the parameters to bytes.
         /// </summary>
         /// <returns>The bytes, or null if the parameter list is null.</returns>
-        /// <param name="parameters">Parameters to convert.</param>
-        private static byte[] ToBytes(ParameterList parameters)
+        private static byte[] ToBytes(int miu, int rw)
         {
-            if (parameters == null) return null;
+            var parameters = new ParameterList();
+            if (miu != Constants.MaximumInformationUnit)
+            {
+                parameters.Add(new MiuxParameter(miu));
+            }
+
+            if (rw != Constants.DefaultReceiveWindowSize)
+            {
+                parameters.Add(new ReceiveWindowSizeParameter(rw));
+            }
+
+            if (parameters.Count == 0) return null;
             return parameters.ToBytes();
         }
 

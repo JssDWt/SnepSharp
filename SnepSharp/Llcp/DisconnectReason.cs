@@ -24,7 +24,7 @@ namespace SnepSharp.Llcp
     /// <summary>
     /// Disconnect reason codes.
     /// </summary>
-    internal enum DisconnectReason
+    public enum DisconnectReason
     {
         /// <summary>
         /// SHALL indicate that the LLC has received a DISC PDU and is now 

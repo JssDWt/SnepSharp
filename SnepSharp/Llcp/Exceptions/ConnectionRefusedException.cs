@@ -1,5 +1,5 @@
 ﻿//
-//  SymmetryUnit.cs
+//  ConnectionRefusedException.cs
 //
 //  Author:
 //       Jesse de Wit <witdejesse@hotmail.com>
@@ -18,21 +18,21 @@
 //
 //  You should have received a copy of the GNU General Public License
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-namespace SnepSharp.Llcp.Pdus
+using System;
+namespace SnepSharp.Llcp.Exceptions
 {
-    /// <summary>
-    /// Symmetry unit (SYMM). Sent by an LLC whenever no other PDUs are 
-    /// available for sending, to ensure symmetry.
-    /// </summary>
-    internal class SymmetryUnit : ProtocolDataUnit
+    public class ConnectionRefusedException : CommunicationException
     {
-        /// <summary>
-        /// Initializes a new instance of the <see cref="SymmetryUnit"/> class.
-        /// </summary>
-        public SymmetryUnit()
-            : base(DataLink.Empty, ProtocolDataUnitType.Symmetry, null, null)
+        public DisconnectReason Reason { get; }
+
+        public ConnectionRefusedException()
         {
+        }
+
+        public ConnectionRefusedException(DisconnectReason reason)
+            : base($"Connection refused. Reason: {reason.ToString()}")
+        {
+            this.Reason = reason;
         }
     }
 }

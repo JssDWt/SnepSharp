@@ -1,5 +1,5 @@
 ﻿//
-//  SymmetryUnit.cs
+//  ILlcDispatch.cs
 //
 //  Author:
 //       Jesse de Wit <witdejesse@hotmail.com>
@@ -19,20 +19,19 @@
 //  You should have received a copy of the GNU General Public License
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-namespace SnepSharp.Llcp.Pdus
+namespace SnepSharp.Llcp
 {
-    /// <summary>
-    /// Symmetry unit (SYMM). Sent by an LLC whenever no other PDUs are 
-    /// available for sending, to ensure symmetry.
-    /// </summary>
-    internal class SymmetryUnit : ProtocolDataUnit
+    using System;
+    using SnepSharp.Llcp.Pdus;
+
+    public interface ILlcDispatch
     {
-        /// <summary>
-        /// Initializes a new instance of the <see cref="SymmetryUnit"/> class.
-        /// </summary>
-        public SymmetryUnit()
-            : base(DataLink.Empty, ProtocolDataUnitType.Symmetry, null, null)
-        {
-        }
+        void EnqueueReceived(ProtocolDataUnit pdu);
+        ProtocolDataUnit DequeueForSend(int maxInformationUnit);
+        void SendNotification(
+            ProtocolDataUnit pdu,
+            bool success,
+            string message,
+            Exception inner);
     }
 }

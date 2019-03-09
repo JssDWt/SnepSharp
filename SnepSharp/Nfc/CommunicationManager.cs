@@ -176,10 +176,8 @@ namespace SnepSharp.Nfc
                                     llc.Run(token);
                                     return this.OnRelease(llc);
                                 }
-                                else
-                                {
-                                    return false;
-                                }
+
+                                return false;
                             }
                         }
                     }

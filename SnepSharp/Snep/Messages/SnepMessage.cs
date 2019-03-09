@@ -179,6 +179,9 @@ namespace SnepSharp.Snep.Messages
             }
         }
 
+        public static SnepMessage Parse(byte[] message, INdefParser ndefParser)
+            => Parse(message, message.Length, ndefParser);
+
         /// <summary>
         /// Creates a <see cref="SnepMessage"/> subclass from the specified 
         /// <see cref="T:System.Byte[]"/>.

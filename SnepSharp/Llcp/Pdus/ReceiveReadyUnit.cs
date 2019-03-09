@@ -36,7 +36,7 @@ namespace SnepSharp.Llcp.Pdus
         /// <param name="sequence">Receive sequence number. Indicates all I pdus 
         /// up through that number have been processed and can be considered 
         /// acknowledged.</param>
-        public ReceiveReadyUnit(DataLink connection, SequenceNumber sequence)
+        public ReceiveReadyUnit(DataLink connection, SequencePair sequence)
             : base(connection, ProtocolDataUnitType.ReceiveReady, sequence, null)
         {
         }

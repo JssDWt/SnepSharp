@@ -60,6 +60,13 @@ namespace SnepSharp.Llcp
         }
 
         /// <summary>
+        /// Reverses the datalink so source becomes destination and vice versa.
+        /// </summary>
+        /// <returns>The reversed datalink.</returns>
+        public DataLink Reverse() 
+            => new DataLink(this.Destination, this.Source);
+
+        /// <summary>
         /// Determines whether the specified <see cref="object"/> is equal to 
         /// the current <see cref="DataLink"/>.
         /// </summary>

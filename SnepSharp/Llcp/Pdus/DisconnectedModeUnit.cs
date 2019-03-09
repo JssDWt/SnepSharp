@@ -28,6 +28,7 @@ namespace SnepSharp.Llcp.Pdus
     /// </summary>
     internal class DisconnectedModeUnit : ProtocolDataUnit
     {
+        public DisconnectReason Reason { get; }
         /// <summary>
         /// Initializes a new instance of the <see cref="T:Llcp.DisconnectedModeUnit"/> class.
         /// </summary>
@@ -36,6 +37,7 @@ namespace SnepSharp.Llcp.Pdus
         public DisconnectedModeUnit(DataLink connection, DisconnectReason reason)
             : base(connection, ProtocolDataUnitType.DisconnectedMode, null, new byte[] { (byte)reason })
         {
+            this.Reason = reason;
         }
     }
 }

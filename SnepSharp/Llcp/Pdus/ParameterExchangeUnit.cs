@@ -22,6 +22,7 @@
 namespace SnepSharp.Llcp.Pdus
 {
     using System;
+    using System.Collections.Generic;
     using SnepSharp.Llcp.Parameters;
 
     /// <summary>
@@ -30,6 +31,12 @@ namespace SnepSharp.Llcp.Pdus
     /// </summary>
     internal class ParameterExchangeUnit : ProtocolDataUnit
     {
+        public LlcpVersion Version { get; }
+        public int MaximumInformationUnit { get; } 
+        public ICollection<LinkAddress> WellknownServices { get; }
+        public int LinkTimeout { get; }
+        LinkServiceClass ServiceClass { get; }
+
         /// <summary>
         /// Gets the parameters.
         /// </summary>
@@ -40,18 +47,30 @@ namespace SnepSharp.Llcp.Pdus
         /// Initializes a new instance of the 
         /// <see cref="ParameterExchangeUnit"/> class.
         /// </summary>
-        /// <param name="connection">Data link connection.</param>
         /// <param name="parameters">Parameters.</param>
         public ParameterExchangeUnit(
-            DataLink connection, 
-            ParameterList parameters)
+            LlcpVersion version,
+            int miu = Constants.MaximumInformationUnit,
+            ICollection<LinkAddress> wellknownServices = null,
+            int linkTimeout = Constants.DefaultTimeout,
+            LinkServiceClass serviceClass = LinkServiceClass.Unknown)
             : base(
-                  connection, 
+                  DataLink.Empty, 
                   ProtocolDataUnitType.ParameterExchange, 
                   null, 
-                  ToBytes(parameters))
+                  ToBytes(
+                    version,
+                    miu,
+                    wellknownServices,
+                    linkTimeout,
+                    serviceClass))
         {
-            this.Parameters = parameters;
+            this.Version = version;
+            this.MaximumInformationUnit = MaximumInformationUnit;
+            this.WellknownServices = wellknownServices 
+                ?? new List<LinkAddress>();
+            this.LinkTimeout = linkTimeout;
+            this.ServiceClass = serviceClass;
         }
 
         /// <summary>
@@ -59,13 +78,36 @@ namespace SnepSharp.Llcp.Pdus
         /// </summary>
         /// <returns>The byte representation of the parameters.</returns>
         /// <param name="parameters">Parameters.</param>
-        private static byte[] ToBytes(ParameterList parameters)
+        private static byte[] ToBytes(
+            LlcpVersion version,
+            int miu,
+            ICollection<LinkAddress> wellknownServices,
+            int linkTimeout,
+            LinkServiceClass serviceClass)
         {
-            if (parameters == null || parameters.Count == 0)
+            var parameters = new ParameterList
             {
-                throw new ArgumentException(
-                    "At least one parameter should be supplied.", 
-                    nameof(parameters));
+                new VersionParameter(version)
+            };
+
+            if (miu != Constants.MaximumInformationUnit)
+            {
+                parameters.Add(new MiuxParameter(miu));
+            }
+
+            if (wellknownServices != null && wellknownServices.Count > 0)
+            {
+                parameters.Add(new WksParameter(wellknownServices));
+            }
+
+            if (linkTimeout != Constants.DefaultTimeout)
+            {
+                parameters.Add(new LinkTimeoutParameter(linkTimeout));
+            }
+
+            if (serviceClass != LinkServiceClass.Unknown)
+            {
+                parameters.Add(new OptionParameter(serviceClass));
             }
 
             return parameters.ToBytes();

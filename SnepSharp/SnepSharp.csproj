@@ -15,5 +15,6 @@
     <Folder Include="Mac\" />
     <Folder Include="Nfc\" />
     <Folder Include="Mac\Pcsc\" />
+    <Folder Include="Llcp\Exceptions\" />
   </ItemGroup>
 </Project>

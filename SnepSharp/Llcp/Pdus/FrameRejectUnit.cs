@@ -33,20 +33,20 @@ namespace SnepSharp.Llcp.Pdus
         /// Gets the State variable for this data link connection..
         /// </summary>
         /// <value>The state.</value>
-        public SequenceNumber State { get; }
+        public SequencePair State { get; }
 
         /// <summary>
         /// Gets the Acknowledgement state variable for this data link 
         /// connection.
         /// </summary>
         /// <value>The state of the acknowledgement.</value>
-        public SequenceNumber AcknowledgementState { get; }
+        public SequencePair AcknowledgementState { get; }
 
         /// <summary>
         /// Gets the Optional rejected pdu sequence number.
         /// </summary>
         /// <value>The rejected pdu sequence.</value>
-        public SequenceNumber? RejectedPduSequence { get; }
+        public SequencePair? RejectedPduSequence { get; }
 
         /// <summary>
         /// Gets a value indicating whether the rejected pdu was malformed.
@@ -101,9 +101,9 @@ namespace SnepSharp.Llcp.Pdus
         public FrameRejectUnit(
             DataLink connection, 
             ProtocolDataUnitType rejectedPduType,
-            SequenceNumber state,
-            SequenceNumber ackState,
-            SequenceNumber? rejectedPduSequence = null,
+            SequencePair state,
+            SequencePair ackState,
+            SequencePair? rejectedPduSequence = null,
             bool malformed = false, 
             bool incorrectInformation = false, 
             bool invalidReceiveSequence = false,
@@ -152,9 +152,9 @@ namespace SnepSharp.Llcp.Pdus
         /// the rejected pdu contained an invalid send sequence.</param>
         private static byte[] ToBytes(
             ProtocolDataUnitType rejectedPduType,
-            SequenceNumber state,
-            SequenceNumber ackState,
-            SequenceNumber? rejectedPduSequence = null,
+            SequencePair state,
+            SequencePair ackState,
+            SequencePair? rejectedPduSequence = null,
             bool malformed = false,
             bool incorrectInformation = false,
             bool invalidReceiveSequence = false,

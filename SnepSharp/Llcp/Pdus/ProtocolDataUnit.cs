@@ -23,7 +23,7 @@ namespace SnepSharp.Llcp.Pdus
 {
     /// <summary>
     /// Protocol data unit (PDU) that is exchanged between 
-    /// <see cref="DataLink"/> (LLC).
+    /// <see cref="Llcp.DataLink"/> (LLC).
     /// </summary>
     public abstract class ProtocolDataUnit
     {
@@ -31,7 +31,7 @@ namespace SnepSharp.Llcp.Pdus
         /// Gets the data link connection this PDU is transmitted over.
         /// </summary>
         /// <value>The data link connection.</value>
-        public DataLink DataLinkConnection { get; }
+        public DataLink DataLink { get; }
 
         /// <summary>
         /// Gets the protocol data unit type.
@@ -43,7 +43,7 @@ namespace SnepSharp.Llcp.Pdus
         /// Gets the sequence number.
         /// </summary>
         /// <value>The sequence number.</value>
-        public SequenceNumber? Sequence { get; }
+        public SequencePair? Sequence { get; }
 
         /// <summary>
         /// Gets the information/content.
@@ -62,10 +62,10 @@ namespace SnepSharp.Llcp.Pdus
         protected ProtocolDataUnit(
             DataLink connection, 
             ProtocolDataUnitType type, 
-            SequenceNumber? sequence,
+            SequencePair? sequence,
             byte[] information)
         {
-            this.DataLinkConnection = connection;
+            this.DataLink = connection;
             this.Type = type;
             this.Sequence = sequence;
             this.Information = information;
@@ -78,8 +78,8 @@ namespace SnepSharp.Llcp.Pdus
         private byte[] CreateHeader()
         {
             byte ptype = (byte)this.Type;
-            int h0 = (this.DataLinkConnection.Destination << 2) | (ptype >> 2);
-            int h1 = (this.DataLinkConnection.Source          ) | (ptype << 6);
+            int h0 = (this.DataLink.Destination << 2) | (ptype >> 2);
+            int h1 = (this.DataLink.Source          ) | (ptype << 6);
 
             byte[] header;
             if (this.Sequence.HasValue)
