@@ -255,7 +255,7 @@ namespace SnepSharp.Llcp
         public Task Connect(string serviceName)
             => this.Connect(serviceName, new CancellationToken(false));
 
-        private Task Connect(string serviceName, CancellationToken token)
+        public Task Connect(string serviceName, CancellationToken token)
         {
             return this.Connect(() =>
             {
@@ -333,7 +333,6 @@ namespace SnepSharp.Llcp
                         pendingSend.Message,
                         pendingSend.InnerException);
                 }
-                
 
                 await this.receiveAvailable.WaitAsync(token);
 

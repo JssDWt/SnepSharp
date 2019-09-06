@@ -18,6 +18,10 @@
         LinkAddress? Address { get; }
         LinkAddress? Peer { get; }
 
+        Task Connect(LinkAddress destination);
+        Task Connect(LinkAddress destination, CancellationToken token);
+        Task Connect(string serviceName);
+        Task Connect(string serviceName, CancellationToken token);
         void Close();
         Task<byte[]> Receive();
         Task<byte[]> Receive(CancellationToken token);

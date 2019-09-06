@@ -43,7 +43,7 @@ namespace SnepSharp.Llcp
 
         public LinkAddress Address { get; }
 
-        public void AddSocket(DataLinkConnection socket)
+        public void AddSocket(ISocket socket)
         {
             if (socket.Address.HasValue)
             {
@@ -52,8 +52,16 @@ namespace SnepSharp.Llcp
                     nameof(socket));
             }
 
-            socket.Address = this.Address;
-            this.sockets.Add(socket);
+            if (!(socket is DataLinkConnection))
+            {
+                throw new ArgumentException(
+                    "Must be a connection mode socket", 
+                    nameof(socket));
+            }
+
+            var dl = (DataLinkConnection)socket;
+            dl.Address = this.Address;
+            this.sockets.Add(dl);
         }
 
         public void RemoveSocket(DataLinkConnection socket)

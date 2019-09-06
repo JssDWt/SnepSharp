@@ -64,6 +64,12 @@ namespace SnepSharp.Llcp
         public ICollection<LinkAddress> RemoteWks { get; private set; }
         public LlcpVersion RemoteVersion { get; private set; }
 
+        public LogicalLinkControl()
+            : this (new LlcpOptions())
+        {
+
+        }
+
         public LogicalLinkControl(LlcpOptions options)
         {
             if (options == null)
@@ -137,7 +143,7 @@ namespace SnepSharp.Llcp
             this.State = SocketState.Shutdown;
         }
 
-        internal void Bind(DataLinkConnection socket, string serviceName)
+        internal void Bind(ISocket socket, string serviceName)
         {
             if (socket == null) throw new ArgumentNullException(nameof(socket));
             if (serviceName == null)
@@ -176,7 +182,7 @@ namespace SnepSharp.Llcp
             }
         }
 
-        internal void Bind(DataLinkConnection socket, LinkAddress address)
+        internal void Bind(ISocket socket, LinkAddress address)
         {
             if (socket == null) throw new ArgumentNullException(nameof(socket));
             if (!LinkAddress.UpperLayerSaps.Contains(address))
@@ -199,7 +205,7 @@ namespace SnepSharp.Llcp
             }
         }
 
-        internal void Bind(DataLinkConnection socket)
+        internal void Bind(ISocket socket)
         {
             if (socket == null) throw new ArgumentNullException(nameof(socket));
 

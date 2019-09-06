@@ -22,18 +22,38 @@
 namespace Tests.DataLinkConnection
 {
     using System;
+    using System.Threading.Tasks;
     using Moq;
     using SnepSharp.Llcp;
+    using SnepSharp.Llcp.Pdus;
     using Xunit;
 
     public class StateTests
     {
         [Fact]
-        public void Connect_Address_StateNotClosed_Throws()
+        public void Initialized_State_Closed()
         {
             var llc = new Mock<LogicalLinkControl>();
             ISocket socket = new DataLinkConnection(llc.Object);
-            socket.
+            Assert.Equal(SocketState.Closed, socket.State);
+        }
+
+        [Fact]
+        public async Task Connect_Address_State_Established()
+        {
+            var llc = new Mock<LogicalLinkControl>();
+
+            ISocket socket = new DataLinkConnection(llc.Object);
+            llc.Setup(l => l.Bind(It.IsAny<ISocket>())).Verifiable();
+            ILlcDispatch dispatch = (ILlcDispatch)socket;
+            Task connect = socket.Connect(new LinkAddress(4));
+            await Task.Delay(10);
+            ProtocolDataUnit pdu = dispatch.DequeueForSend(1000);
+            Assert.NotNull(pdu);
+            var cc = new ConnectionCompleteUnit(DataLink.Empty);
+            dispatch.EnqueueReceived(cc);
+            await connect;
+            Assert.Equal(SocketState.Established, socket.State);
         }
     }
 }
